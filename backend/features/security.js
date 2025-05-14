@@ -70,7 +70,7 @@ function setupSecurityRoutes(pool) {
       const token = generateToken(newUser);
       
       // Return token and user data
-      res.status(201).json(formatUserResponse(newUser, token, 'User created and logged in'));
+      res.status(200).json(formatUserResponse(newUser, token, 'User created and logged in'));
     } catch (error) {
       if (error.code === 'ER_DUP_ENTRY') {
         return res.status(409).json({ error: 'Username or email already exists' });
@@ -91,7 +91,7 @@ function setupSecurityRoutes(pool) {
       
       // Check if the user exists in the database
       const [users] = await pool.execute(
-        'SELECT id, username, name, last_name, mail FROM il_sec_users WHERE (username = ? OR mail = ?) AND password = ?',
+        'SELECT id, username, name, last_name, mail FROM il_sec_users WHERE (username = ? OR mail = ?) AND password = ? AND status = 1',
         [username, username, password] // In production, should compare hashed passwords
       );
       
