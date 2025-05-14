@@ -1,11 +1,16 @@
-# 🌟 CycleBuddy - Empowering Menstrual Health Through Web3
+# CycleBuddy - Empowering Menstrual Health Through Web3
+
+<div align="center">
+  <img src="docs/images/cyclebuddylogo.png" alt="CycleBuddy Logo" width="300"/>
+</div>
+
 
 [![Built on Stellar](https://img.shields.io/badge/Built%20on-Stellar-brightgreen)](https://stellar.org)
 [![Hackathon Project](https://img.shields.io/badge/EasyA-Consensus%20Hackathon-blue)](https://easya.io)
 
 > "Know your body, own your cycle" - A Web3-powered menstrual health companion that puts privacy and education first.
 
-## 🌈 Vision
+## Vision
 
 CycleBuddy revolutionizes menstrual health tracking by combining the privacy and security of Web3 with an intuitive, educational interface designed specifically for young users. We're not just building another period tracker – we're creating a movement to reshape how people learn about and interact with their bodies.
 
@@ -27,7 +32,7 @@ graph TD
     style G fill:#ffcc99
 ```
 
-## 🚀 Key Features
+## Key Features
 
 - **Secure Authentication**: Leveraging Stellar Passkeys for seamless and secure login
 - **Private Data Storage**: Decentralized storage ensuring user data privacy
@@ -44,7 +49,7 @@ graph TD
 - **Smart Contracts**: Rust-based Stellar Smart Contracts
 - **Data Storage**: Decentralized IPFS/Stellar combination
 
-## 📚 Documentation
+## Documentation
 
 Detailed documentation can be found in the `/docs` directory:
 
@@ -55,7 +60,7 @@ Detailed documentation can be found in the `/docs` directory:
 - [API Documentation](docs/api.md)
 - [Smart Contracts](docs/smart-contracts.md)
 
-## 🎯 Problem & Solution
+## Problem & Solution
 
 ### The Problem
 Traditional period tracking apps often:
@@ -87,25 +92,22 @@ cp .env.example .env
 npm run dev
 ```
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](docs/contributing.md) for details.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Stellar Foundation for their amazing blockchain platform
 - EasyA Consensus Hackathon for the opportunity
 - Our early users and community for valuable feedback
 
-## 📬 Contact
+## Contact
 
 - Email: bradyalimedi@gmail.com
-- Discord: [Join our community](https://discord.gg/cyclebuddy)
 
 ---
-
-Built with ❤️ for the EasyA Consensus Hackathon 2025 
