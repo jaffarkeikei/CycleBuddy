@@ -1,0 +1,48 @@
+# Node modules
+node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Environment variables
+.env
+.env.*.local
+
+# Debugging files
+.vscode/
+*.swp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+
+# Build artifacts
+dist/
+build/
+
+# Optional: If you're using TypeScript
+*.tsbuildinfo
+
+# Optional: If you're using PM2
+.pids
+ecosystem.config.js
+
+# Optional: If using next.js or other SSR frameworks
+.next/
+
+# Optional: If using Prisma
+.prisma/
