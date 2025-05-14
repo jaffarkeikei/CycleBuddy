@@ -5,6 +5,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const router = express.Router();
 const setupSecurityRoutes = require('./features/security');
+//const setupCycleRoutes = require('./features/cycle');
 
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -22,6 +23,9 @@ const pool = mysql.createPool({
 
 // Register the security routes
 app.use('/api', setupSecurityRoutes(pool));
+
+// Register the cycle routes
+// app.use('/api', setupCycleRoutes(pool));
 
 // Start the server
 app.listen(PORT, () => {
