@@ -1,5 +1,19 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, Address, BytesN, Env, Map, Symbol, Vec, vec};
+use soroban_sdk::{contract, contractimpl, contracttype, Address, BytesN, Env, Symbol, Vec, String, Bytes, symbol_short, contracterror};
+
+#[contracterror]
+#[derive(Clone, Debug, Copy, Eq, PartialEq, PartialOrd, Ord)]
+#[repr(u32)]
+pub enum CommunityError {
+    AlreadyInitialized = 1,
+    NotInitialized = 2,
+    PostNotFound = 3,
+    Unauthorized = 4,
+    PostNotApproved = 5,
+    StorageError = 6,
+    CommentNotFound = 7,
+    NotModerator = 8,
+}
 
 /// Data storage keys
 #[derive(Clone)]
@@ -7,17 +21,18 @@ use soroban_sdk::{contract, contractimpl, contracttype, Address, BytesN, Env, Ma
 pub enum DataKey {
     Owner,
     RegistryContract,
-    Post(BytesN<32>),         // Post ID -> Post
-    PostIndex,                // Vector of all post IDs
-    UserPosts(Address),       // User -> Vector of post IDs
-    Moderator(Address),       // Address -> bool
-    Reward(Address),          // Address -> Balance
-    Category(Symbol),         // Category -> Vector of post IDs
-    Vote(BytesN<32>, Address), // (Post ID, User) -> Vote
+    PostIndex,              // All post IDs
+    Post(BytesN<32>),       // Post ID -> Post
+    Moderator(Address),     // Address -> bool
+    UserPosts(Address),     // User -> Vec<post_ids>
+    Category(Symbol),       // Category -> Vec<post_ids>
+    Vote(BytesN<32>, Address), // Post ID, User -> VoteType
+    Reward(Address),        // User -> i128
+    Comment(BytesN<32>),    // Comment data by ID
 }
 
 /// Post status enum
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Copy)]
 #[contracttype]
 pub enum PostStatus {
     Pending,
@@ -26,12 +41,11 @@ pub enum PostStatus {
 }
 
 /// Voting enum
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Copy)]
 #[contracttype]
-pub enum Vote {
-    Up,
-    Down,
-    None,
+pub enum VoteType {
+    Upvote,
+    Downvote,
 }
 
 /// A community post
@@ -39,14 +53,28 @@ pub enum Vote {
 #[contracttype]
 pub struct Post {
     pub id: BytesN<32>,          // Unique identifier
+    pub title: String,
+    pub content: String,
     pub author: Address,         // Author's address
-    pub content_hash: BytesN<32>, // IPFS hash of content
     pub category: Symbol,        // Category (e.g., "education", "question")
-    pub created_at: u64,         // Timestamp
+    pub timestamp: u64,          // Timestamp
     pub status: PostStatus,      // Moderation status
-    pub up_votes: u32,           // Number of up votes
-    pub down_votes: u32,         // Number of down votes
-    pub is_anonymous: bool,      // Whether the post is anonymous
+    pub upvotes: i128,           // Number of up votes
+    pub downvotes: i128,         // Number of down votes
+    pub approved: bool,          // Whether the post is approved
+    pub comments: Vec<BytesN<32>>, // IDs of comments on this post
+    pub is_removed: bool,          // For moderation
+}
+
+/// A comment on a post
+#[derive(Clone)]
+#[contracttype]
+pub struct Comment {
+    pub author: Address,
+    pub content: String,
+    pub timestamp: u64,
+    pub likes: i128,
+    pub is_removed: bool,      // For moderation
 }
 
 #[contract]
@@ -55,86 +83,110 @@ pub struct CommunityContract;
 #[contractimpl]
 impl CommunityContract {
     /// Initialize the contract with registry address
-    pub fn initialize(env: Env, owner: Address, registry_contract: Address) -> Result<(), Error> {
-        if get_owner(&env).is_some() {
-            return Err(Error::AlreadyInitialized);
+    pub fn initialize(
+        env: Env,
+        owner: Address,
+        registry_contract: Address,
+    ) -> Result<(), CommunityError> {
+        if env.storage().instance().has(&DataKey::Owner) {
+            return Err(CommunityError::AlreadyInitialized);
         }
-
+        
+        // Verify caller is the owner
         owner.require_auth();
         
-        // Set owner and registry address
-        env.storage().set(&DataKey::Owner, &owner);
-        env.storage().set(&DataKey::RegistryContract, &registry_contract);
+        // Initialize contract storage
+        env.storage().instance().set(&DataKey::Owner, &owner);
+        env.storage().instance().set(&DataKey::RegistryContract, &registry_contract);
         
         // Initialize post index
-        env.storage().set(&DataKey::PostIndex, &Vec::<BytesN<32>>::new(&env));
+        env.storage().instance().set(&DataKey::PostIndex, &Vec::<BytesN<32>>::new(&env));
         
-        // Make owner a moderator
-        env.storage().set(&DataKey::Moderator(owner.clone()), &true);
+        // Add owner as a moderator
+        env.storage().instance().set(&DataKey::Moderator(owner.clone()), &true);
         
         // Log initialization
-        env.events().publish(("initialize", "community"), owner);
+        env.events().publish(
+            (symbol_short!("init"), symbol_short!("comm")),
+            owner
+        );
         
         Ok(())
+    }
+    
+    /// Generate a random post ID
+    fn generate_post_id(env: &Env) -> BytesN<32> {
+        // Create a random seed based on the timestamp
+        let timestamp = env.ledger().timestamp();
+        let random_bytes = timestamp.to_be_bytes();
+        
+        // Create a BytesN object from the random bytes for hashing
+        let bytes_to_hash = Bytes::from_array(env, &random_bytes);
+        
+        // Hash the bytes to get a deterministic but random-like BytesN<32>
+        env.crypto().sha256(&bytes_to_hash)
     }
     
     /// Create a new post
     pub fn create_post(
         env: Env,
         author: Address,
-        content_hash: BytesN<32>,
+        title: String,
+        content: String,
         category: Symbol,
-        is_anonymous: bool,
-    ) -> Result<BytesN<32>, Error> {
-        // Require authorization from the author
+    ) -> Result<BytesN<32>, CommunityError> {
         author.require_auth();
         
-        // Generate a unique post ID using hash of inputs and timestamp
-        let now = env.ledger().timestamp();
-        let post_id_preimage = (author.clone(), content_hash.clone(), now);
-        let post_id = env.crypto().sha256(&env.obj_to_bytes(&post_id_preimage));
+        let timestamp = env.ledger().timestamp();
+        let post_id = Self::generate_post_id(&env);
         
-        // Create the post
         let post = Post {
             id: post_id.clone(),
+            title,
+            content,
             author: author.clone(),
-            content_hash,
-            category,
-            created_at: now,
-            status: PostStatus::Pending, // All posts start as pending for moderation
-            up_votes: 0,
-            down_votes: 0,
-            is_anonymous,
+            category: category.clone(),
+            timestamp,
+            status: PostStatus::Pending,
+            upvotes: 0,
+            downvotes: 0,
+            approved: false,
+            comments: Vec::new(&env),
+            is_removed: false,
         };
         
-        // Store the post
-        env.storage().set(&DataKey::Post(post_id.clone()), &post);
+        env.storage().instance().set(&DataKey::Post(post_id.clone()), &post);
         
-        // Add to post index
-        let mut post_index: Vec<BytesN<32>> = env.storage()
-            .get(&DataKey::PostIndex)
-            .unwrap_or_else(|| Vec::new(&env));
+        // Update post index
+        let post_index = env.storage().instance().get::<DataKey, Vec<BytesN<32>>>(&DataKey::PostIndex);
+        let mut post_index = match post_index {
+            Some(index) => index,
+            None => Vec::new(&env),
+        };
         post_index.push_back(post_id.clone());
-        env.storage().set(&DataKey::PostIndex, &post_index);
+        env.storage().instance().set(&DataKey::PostIndex, &post_index);
         
-        // Add to user's posts
-        let mut user_posts: Vec<BytesN<32>> = env.storage()
-            .get(&DataKey::UserPosts(author.clone()))
-            .unwrap_or_else(|| Vec::new(&env));
+        // Update user posts
+        let user_posts = env.storage().instance().get::<DataKey, Vec<BytesN<32>>>(&DataKey::UserPosts(author.clone()));
+        let mut user_posts = match user_posts {
+            Some(posts) => posts,
+            None => Vec::new(&env),
+        };
         user_posts.push_back(post_id.clone());
-        env.storage().set(&DataKey::UserPosts(author.clone()), &user_posts);
+        env.storage().instance().set(&DataKey::UserPosts(author.clone()), &user_posts);
         
-        // Add to category
-        let mut category_posts: Vec<BytesN<32>> = env.storage()
-            .get(&DataKey::Category(category.clone()))
-            .unwrap_or_else(|| Vec::new(&env));
+        // Update category posts
+        let category_posts = env.storage().instance().get::<DataKey, Vec<BytesN<32>>>(&DataKey::Category(category.clone()));
+        let mut category_posts = match category_posts {
+            Some(posts) => posts,
+            None => Vec::new(&env),
+        };
         category_posts.push_back(post_id.clone());
-        env.storage().set(&DataKey::Category(category.clone()), &category_posts);
+        env.storage().instance().set(&DataKey::Category(category.clone()), &category_posts);
         
-        // Log post creation
         env.events().publish(
-            ("create_post", category), 
-            (author, post_id.clone())
+            (symbol_short!("create"), symbol_short!("post")),
+            (author, post_id.clone(), category)
         );
         
         Ok(post_id)
@@ -146,39 +198,30 @@ impl CommunityContract {
         moderator: Address,
         post_id: BytesN<32>,
         approve: bool,
-    ) -> Result<(), Error> {
-        // Check if moderator is authorized
-        let is_moderator: bool = env.storage()
-            .get(&DataKey::Moderator(moderator.clone()))
-            .unwrap_or(false);
-            
-        if !is_moderator {
-            return Err(Error::Unauthorized);
+    ) -> Result<(), CommunityError> {
+        if !Self::is_moderator(&env, moderator.clone()) {
+            return Err(CommunityError::NotModerator);
         }
         
-        // Require authorization from the moderator
         moderator.require_auth();
         
-        // Get the post
-        let mut post: Post = env.storage()
-            .get(&DataKey::Post(post_id.clone()))
-            .ok_or(Error::PostNotFound)?;
-            
-        // Update post status
+        let post = env.storage().instance().get::<DataKey, Post>(&DataKey::Post(post_id.clone()));
+        let mut post = match post {
+            Some(post) => post,
+            None => return Err(CommunityError::PostNotFound),
+        };
+        
         post.status = if approve { PostStatus::Approved } else { PostStatus::Rejected };
         
-        // Save updated post
-        env.storage().set(&DataKey::Post(post_id.clone()), &post);
+        env.storage().instance().set(&DataKey::Post(post_id.clone()), &post);
         
-        // If approved, award the author
         if approve {
-            self.award_author(env.clone(), post.author.clone())?;
+            Self::award_author(env.clone(), post.author.clone())?;
         }
         
-        // Log moderation action
         env.events().publish(
-            if approve { ("approve_post") } else { ("reject_post") }, 
-            (moderator, post_id)
+            (if approve { symbol_short!("approve") } else { symbol_short!("reject") }, symbol_short!("post")), 
+            (moderator, post_id.clone())
         );
         
         Ok(())
@@ -189,21 +232,20 @@ impl CommunityContract {
         env: Env,
         owner: Address,
         new_moderator: Address,
-    ) -> Result<(), Error> {
-        // Check if caller is the owner
-        let contract_owner = get_owner(&env).ok_or(Error::NotInitialized)?;
+    ) -> Result<(), CommunityError> {
+        let contract_owner = Self::get_owner_internal(&env)?;
         if owner != contract_owner {
-            return Err(Error::Unauthorized);
+            return Err(CommunityError::Unauthorized);
         }
         
-        // Require authorization from the owner
         owner.require_auth();
         
-        // Set the new moderator
-        env.storage().set(&DataKey::Moderator(new_moderator.clone()), &true);
+        env.storage().instance().set(&DataKey::Moderator(new_moderator.clone()), &true);
         
-        // Log event
-        env.events().publish(("add_moderator"), (owner, new_moderator));
+        env.events().publish(
+            (symbol_short!("add"), symbol_short!("mod")),
+            (owner, new_moderator)
+        );
         
         Ok(())
     }
@@ -212,22 +254,21 @@ impl CommunityContract {
     pub fn remove_moderator(
         env: Env,
         owner: Address,
-        moderator: Address,
-    ) -> Result<(), Error> {
-        // Check if caller is the owner
-        let contract_owner = get_owner(&env).ok_or(Error::NotInitialized)?;
+        moderator_to_remove: Address,
+    ) -> Result<(), CommunityError> {
+        let contract_owner = Self::get_owner_internal(&env)?;
         if owner != contract_owner {
-            return Err(Error::Unauthorized);
+            return Err(CommunityError::Unauthorized);
         }
         
-        // Require authorization from the owner
         owner.require_auth();
         
-        // Remove the moderator
-        env.storage().remove(&DataKey::Moderator(moderator.clone()));
+        env.storage().instance().remove(&DataKey::Moderator(moderator_to_remove.clone()));
         
-        // Log event
-        env.events().publish(("remove_moderator"), (owner, moderator));
+        env.events().publish(
+            (symbol_short!("remove"), symbol_short!("mod")),
+            (owner, moderator_to_remove)
+        );
         
         Ok(())
     }
@@ -237,56 +278,46 @@ impl CommunityContract {
         env: Env,
         user: Address,
         post_id: BytesN<32>,
-        vote: Vote,
-    ) -> Result<(), Error> {
-        // Require authorization from the user
+        vote_type: VoteType,
+    ) -> Result<(), CommunityError> {
         user.require_auth();
         
-        // Get the post
-        let mut post: Post = env.storage()
-            .get(&DataKey::Post(post_id.clone()))
-            .ok_or(Error::PostNotFound)?;
-            
-        // Check if post is approved
+        let post = env.storage().instance().get::<DataKey, Post>(&DataKey::Post(post_id.clone()));
+        let mut post = match post {
+            Some(post) => post,
+            None => return Err(CommunityError::PostNotFound),
+        };
+        
         if post.status != PostStatus::Approved {
-            return Err(Error::PostNotApproved);
+            return Err(CommunityError::PostNotApproved);
         }
         
-        // Get previous vote (if any)
-        let previous_vote: Vote = env.storage()
-            .get(&DataKey::Vote(post_id.clone(), user.clone()))
-            .unwrap_or(Vote::None);
-            
-        // Update vote counts
-        match (previous_vote, vote.clone()) {
-            (Vote::None, Vote::Up) => post.up_votes += 1,
-            (Vote::None, Vote::Down) => post.down_votes += 1,
-            (Vote::Up, Vote::None) => post.up_votes -= 1,
-            (Vote::Up, Vote::Down) => {
-                post.up_votes -= 1;
-                post.down_votes += 1;
-            },
-            (Vote::Down, Vote::None) => post.down_votes -= 1,
-            (Vote::Down, Vote::Up) => {
-                post.down_votes -= 1;
-                post.up_votes += 1;
-            },
-            _ => (), // No change for same vote
-        }
-        
-        // Save updated post
-        env.storage().set(&DataKey::Post(post_id.clone()), &post);
-        
-        // Save user's vote
-        if vote == Vote::None {
-            env.storage().remove(&DataKey::Vote(post_id.clone(), user.clone()));
+        let previous_vote = env.storage().instance().get::<DataKey, VoteType>(&DataKey::Vote(post_id.clone(), user.clone()));
+
+        if let Some(prev_vote) = previous_vote {
+            if prev_vote == vote_type {
+                // Cancel the vote
+                if prev_vote == VoteType::Upvote { post.upvotes -= 1; } 
+                else { post.downvotes -= 1; }
+                env.storage().instance().remove(&DataKey::Vote(post_id.clone(), user.clone()));
+            } else {
+                // Change vote type
+                if vote_type == VoteType::Upvote { post.downvotes -= 1; post.upvotes += 1; }
+                else { post.upvotes -= 1; post.downvotes += 1; }
+                env.storage().instance().set(&DataKey::Vote(post_id.clone(), user.clone()), &vote_type);
+            }
         } else {
-            env.storage().set(&DataKey::Vote(post_id.clone(), user.clone()), &vote);
+            // New vote
+            if vote_type == VoteType::Upvote { post.upvotes += 1; }
+            else { post.downvotes += 1; }
+            env.storage().instance().set(&DataKey::Vote(post_id.clone(), user.clone()), &vote_type);
         }
         
-        // Log vote event
-        env.events().publish(("vote"), (user, post_id, vote));
-        
+        env.storage().instance().set(&DataKey::Post(post_id.clone()), &post);
+        env.events().publish(
+            (symbol_short!("vote"), symbol_short!("cast")),
+            (user, post_id, vote_type)
+        );
         Ok(())
     }
     
@@ -294,91 +325,116 @@ impl CommunityContract {
     pub fn get_post(
         env: Env,
         post_id: BytesN<32>,
-    ) -> Result<Post, Error> {
-        // Get the post
-        env.storage().get(&DataKey::Post(post_id))
-            .ok_or(Error::PostNotFound)
+    ) -> Result<Post, CommunityError> {
+        let post = env.storage().instance().get::<DataKey, Post>(&DataKey::Post(post_id));
+        match post {
+            Some(post) => Ok(post),
+            None => Err(CommunityError::PostNotFound),
+        }
+    }
+    
+    /// Get a comment by ID
+    pub fn get_comment(
+        env: Env,
+        comment_id: BytesN<32>,
+    ) -> Result<Comment, CommunityError> {
+        let comment = env.storage().instance().get::<DataKey, Comment>(&DataKey::Comment(comment_id));
+        match comment {
+            Some(comment) => Ok(comment),
+            None => Err(CommunityError::CommentNotFound),
+        }
     }
     
     /// List all approved posts
-    pub fn list_approved_posts(env: Env) -> Vec<BytesN<32>> {
-        let post_index: Vec<BytesN<32>> = env.storage()
-            .get(&DataKey::PostIndex)
-            .unwrap_or_else(|| Vec::new(&env));
-            
+    pub fn list_approved_posts(env: Env) -> Result<Vec<BytesN<32>>, CommunityError> {
+        let post_index = env.storage().instance().get::<DataKey, Vec<BytesN<32>>>(&DataKey::PostIndex);
+        let post_index = match post_index {
+            Some(index) => index,
+            None => return Ok(Vec::new(&env)),
+        };
+        
         let mut approved_posts = Vec::new(&env);
         
-        for post_id in post_index.iter() {
-            if let Some(post) = env.storage().get::<BytesN<32>, Post>(&DataKey::Post(post_id.clone())) {
+        for i in 0..post_index.len() {
+            let post_id = post_index.get_unchecked(i);
+            if let Some(post) = env.storage().instance().get::<DataKey, Post>(&DataKey::Post(post_id.clone())) {
                 if post.status == PostStatus::Approved {
                     approved_posts.push_back(post_id.clone());
                 }
             }
         }
         
-        approved_posts
+        Ok(approved_posts)
     }
     
     /// List posts by category
-    pub fn list_posts_by_category(env: Env, category: Symbol) -> Vec<BytesN<32>> {
-        env.storage()
-            .get(&DataKey::Category(category))
-            .unwrap_or_else(|| Vec::new(&env))
+    pub fn list_posts_by_category(env: Env, category: Symbol) -> Result<Vec<BytesN<32>>, CommunityError> {
+        let category_posts = env.storage().instance().get::<DataKey, Vec<BytesN<32>>>(&DataKey::Category(category));
+        match category_posts {
+            Some(posts) => Ok(posts),
+            None => Ok(Vec::new(&env)),
+        }
     }
     
     /// List posts by user
-    pub fn list_posts_by_user(env: Env, user: Address) -> Vec<BytesN<32>> {
-        env.storage()
-            .get(&DataKey::UserPosts(user))
-            .unwrap_or_else(|| Vec::new(&env))
+    pub fn list_posts_by_user(env: Env, user: Address) -> Result<Vec<BytesN<32>>, CommunityError> {
+        let user_posts = env.storage().instance().get::<DataKey, Vec<BytesN<32>>>(&DataKey::UserPosts(user));
+        match user_posts {
+            Some(posts) => Ok(posts),
+            None => Ok(Vec::new(&env)),
+        }
     }
     
     /// Award tokens to an author (internal function)
     fn award_author(
-        &self,
         env: Env,
         author: Address,
-    ) -> Result<(), Error> {
-        // Get current reward balance
-        let current_reward: i128 = env.storage()
-            .get(&DataKey::Reward(author.clone()))
-            .unwrap_or(0);
-            
-        // Add reward (10 tokens per approved post)
+    ) -> Result<(), CommunityError> {
+        let current_reward = env.storage().instance().get::<DataKey, i128>(&DataKey::Reward(author.clone()));
+        let current_reward = match current_reward {
+            Some(reward) => reward,
+            None => 0,
+        };
+        
         let new_reward = current_reward + 10;
+        env.storage().instance().set(&DataKey::Reward(author.clone()), &new_reward);
         
-        // Store updated reward
-        env.storage().set(&DataKey::Reward(author.clone()), &new_reward);
-        
-        // Log reward event
-        env.events().publish(("reward_author"), (author, 10_i128));
+        env.events().publish(
+            (symbol_short!("reward"), symbol_short!("author")),
+            (author, new_reward)
+        );
         
         Ok(())
     }
     
     /// Get user's reward balance
-    pub fn get_reward_balance(env: Env, user: Address) -> i128 {
-        env.storage()
-            .get(&DataKey::Reward(user))
-            .unwrap_or(0)
+    pub fn get_user_rewards(env: Env, user: Address) -> Result<i128, CommunityError> {
+        let reward = env.storage().instance().get::<DataKey, i128>(&DataKey::Reward(user));
+        match reward {
+            Some(reward) => Ok(reward),
+            None => Ok(0),
+        }
     }
-}
-
-/// Get the owner of the contract
-fn get_owner(env: &Env) -> Option<Address> {
-    env.storage().get(&DataKey::Owner)
-}
-
-/// Error types for the community contract
-#[derive(Debug, Clone)]
-#[contracttype]
-pub enum Error {
-    AlreadyInitialized,
-    NotInitialized,
-    Unauthorized,
-    PostNotFound,
-    PostNotApproved,
-    InvalidVote,
+    
+    /// Check if an address is a moderator
+    pub fn is_moderator(
+        env: &Env,
+        moderator_address: Address,
+    ) -> bool {
+        match env.storage().instance().get::<DataKey, bool>(&DataKey::Moderator(moderator_address)) {
+            Some(is_mod) => is_mod,
+            None => false,
+        }
+    }
+    
+    /// Get the contract owner
+    fn get_owner_internal(env: &Env) -> Result<Address, CommunityError> {
+        let owner = env.storage().instance().get::<DataKey, Address>(&DataKey::Owner);
+        match owner {
+            Some(addr) => Ok(addr),
+            None => Err(CommunityError::NotInitialized),
+        }
+    }
 }
 
 /// Unit tests for the community contract
@@ -386,86 +442,68 @@ pub enum Error {
 mod test {
     use super::*;
     use soroban_sdk::testutils::{Address as _, AuthorizedFunction, Events};
-    use soroban_sdk::{vec, BytesN, Env, Symbol};
+    use soroban_sdk::{vec};
 
     #[test]
     fn test_create_and_moderate_post() {
         let env = Env::default();
+        env.mock_all_auths();
         let contract_id = env.register_contract(None, CommunityContract);
+        let client = CommunityContractClient::new(&env, &contract_id);
+
         let owner = Address::generate(&env);
         let registry = Address::generate(&env);
+        client.initialize(&owner, &registry);
+
         let author = Address::generate(&env);
+        let title = String::from_str(&env, "Test Post");
+        let content = String::from_str(&env, "This is a test post.");
+        let category = symbol_short!("edu");
         
-        // Create test data
-        let content_hash = BytesN::from_array(&env, &[1; 32]);
-        let category = Symbol::new(&env, "education");
+        let post_id = client.create_post(&author, &title, &content, &category);
         
-        // Authorize all calls
-        env.mock_all_auths();
-        
-        // Initialize the contract
-        let client = CommunityContractClient::new(&env, &contract_id);
-        client.initialize(&owner, &registry).unwrap();
-        
-        // Create a post
-        let post_id = client.create_post(&author, &content_hash, &category, &false).unwrap();
-        
-        // Get the post and verify it's pending
-        let post = client.get_post(&post_id).unwrap();
+        let post = client.get_post(&post_id);
         assert_eq!(post.status, PostStatus::Pending);
         
-        // Moderate the post (approve)
-        client.moderate_post(&owner, &post_id, &true).unwrap();
+        client.moderate_post(&owner, &post_id, &true);
         
-        // Get the post again and verify it's approved
-        let post = client.get_post(&post_id).unwrap();
-        assert_eq!(post.status, PostStatus::Approved);
+        let post_after_mod = client.get_post(&post_id);
+        assert_eq!(post_after_mod.status, PostStatus::Approved);
         
-        // Check that author received a reward
-        let reward = client.get_reward_balance(&author);
+        let reward = client.get_user_rewards(&author);
         assert_eq!(reward, 10);
     }
     
     #[test]
     fn test_voting() {
         let env = Env::default();
+        env.mock_all_auths();
         let contract_id = env.register_contract(None, CommunityContract);
+        let client = CommunityContractClient::new(&env, &contract_id);
+
         let owner = Address::generate(&env);
-        let registry = Address::generate(&env);
+        client.initialize(&owner, &Address::generate(&env));
         let author = Address::generate(&env);
         let voter = Address::generate(&env);
         
-        // Create test data
-        let content_hash = BytesN::from_array(&env, &[1; 32]);
-        let category = Symbol::new(&env, "education");
+        let title = String::from_str(&env, "VotingPost");
+        let content = String::from_str(&env, "Vote here!");
+        let category = symbol_short!("poll");
         
-        // Authorize all calls
-        env.mock_all_auths();
+        let post_id = client.create_post(&author, &title, &content, &category);
+        client.moderate_post(&owner, &post_id, &true); 
         
-        // Initialize the contract
-        let client = CommunityContractClient::new(&env, &contract_id);
-        client.initialize(&owner, &registry).unwrap();
+        client.vote(&voter, &post_id, &VoteType::Upvote);
+        let post_after_upvote = client.get_post(&post_id);
+        assert_eq!(post_after_upvote.upvotes, 1);
         
-        // Create a post
-        let post_id = client.create_post(&author, &content_hash, &category, &false).unwrap();
-        
-        // Approve the post
-        client.moderate_post(&owner, &post_id, &true).unwrap();
-        
-        // Vote up
-        client.vote(&voter, &post_id, &Vote::Up).unwrap();
-        
-        // Check vote was recorded
-        let post = client.get_post(&post_id).unwrap();
-        assert_eq!(post.up_votes, 1);
-        assert_eq!(post.down_votes, 0);
-        
-        // Change vote to down
-        client.vote(&voter, &post_id, &Vote::Down).unwrap();
-        
-        // Check vote was updated
-        let post = client.get_post(&post_id).unwrap();
-        assert_eq!(post.up_votes, 0);
-        assert_eq!(post.down_votes, 1);
+        client.vote(&voter, &post_id, &VoteType::Downvote);
+        let post_after_downvote = client.get_post(&post_id);
+        assert_eq!(post_after_downvote.upvotes, 0);
+        assert_eq!(post_after_downvote.downvotes, 1);
+
+        client.vote(&voter, &post_id, &VoteType::Downvote);
+        let post_after_remove_vote = client.get_post(&post_id);
+        assert_eq!(post_after_remove_vote.downvotes, 0);
     }
 } 

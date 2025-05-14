@@ -1,190 +1,251 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, Map, Vec, Symbol};
+use soroban_sdk::{contract, contractimpl, contracttype, Address, BytesN, Env, String, Val, Vec, symbol_short, IntoVal, contracterror};
 
+#[contracterror]
+#[derive(Clone, Debug, Copy, Eq, PartialEq, PartialOrd, Ord)]
+#[repr(u32)]
+pub enum RegistryError {
+    AlreadyInitialized = 1,
+    NotInitialized = 2,
+    Unauthorized = 3, // Kept for consistency if needed, though owner checks are specific
+    ContractNotSet = 4,
+    UserAlreadyRegistered = 5,
+    StorageError = 7, // For SDK storage errors
+}
+
+// Define contract types
+#[derive(Clone)]
+#[contracttype]
+pub enum ContractType {
+    Auth = 0,
+    Data = 1,
+    Community = 2,
+}
+
+// Define storage keys
 #[derive(Clone)]
 #[contracttype]
 pub enum DataKey {
     Owner,
-    Admin(Address),
-    Contract(Symbol),
+    UserRegistry,
+    DataContract,
+    AuthContract,
+    CommunityContract,
+    User(Address),
 }
 
-#[derive(Clone)]
-#[contracttype]
-pub enum ContractType {
-    Auth,
-    Data,
-    Community,
-}
-
+// Define registry contract with storage of other contract addresses
 #[contract]
 pub struct RegistryContract;
 
 #[contractimpl]
 impl RegistryContract {
-    /// Initialize the contract with the owner
-    pub fn initialize(env: Env, owner: Address) -> Result<(), Error> {
-        if get_owner(&env).is_some() {
-            return Err(Error::AlreadyInitialized);
+    // Initialize the registry contract
+    pub fn initialize(env: Env, owner: Address) -> Result<(), RegistryError> {
+        if env.storage().instance().has(&DataKey::Owner) {
+            return Err(RegistryError::AlreadyInitialized);
         }
-
         owner.require_auth();
-        env.storage().set(&DataKey::Owner, &owner);
-        
-        // Log initialization
-        env.events().publish(("initialize", "registry"), owner);
-        
-        Ok(())
-    }
-    
-    /// Register a contract by its type and address
-    pub fn register_contract(env: Env, contract_type: ContractType, address: Address) -> Result<(), Error> {
-        // Get owner of this contract
-        let owner = get_owner(&env).ok_or(Error::NotInitialized)?;
-        
-        // Check authorization
-        owner.require_auth();
-        
-        // Convert contract type to symbol
-        let contract_type_symbol = match contract_type {
-            ContractType::Auth => Symbol::new(&env, "auth"),
-            ContractType::Data => Symbol::new(&env, "data"),
-            ContractType::Community => Symbol::new(&env, "community"),
-        };
-        
-        // Store contract address
-        env.storage().set(&DataKey::Contract(contract_type_symbol.clone()), &address);
-        
-        // Log event
+        env.storage().instance().set(&DataKey::Owner, &owner);
+        env.storage().instance().set(&DataKey::UserRegistry, &Vec::<Address>::new(&env));
         env.events().publish(
-            ("register_contract", contract_type_symbol), 
-            address
+            (symbol_short!("init"), symbol_short!("reg")),
+            owner
         );
-        
+        Ok(())
+    }
+
+    pub fn set_data_contract(env: Env, data_contract: Address) -> Result<(), RegistryError> {
+        let owner = Self::get_owner_internal(&env)?;
+        owner.require_auth();
+        env.storage().instance().set(&DataKey::DataContract, &data_contract);
+        env.events().publish(
+            (symbol_short!("set_data"), symbol_short!("contract")),
+            data_contract.clone()
+        );
         Ok(())
     }
     
-    /// Get a contract address by type
-    pub fn get_contract(env: Env, contract_type: ContractType) -> Result<Address, Error> {
-        // Convert contract type to symbol
-        let contract_type_symbol = match contract_type {
-            ContractType::Auth => Symbol::new(&env, "auth"),
-            ContractType::Data => Symbol::new(&env, "data"),
-            ContractType::Community => Symbol::new(&env, "community"),
+    pub fn set_auth_contract(env: Env, auth_contract: Address) -> Result<(), RegistryError> {
+        let owner = Self::get_owner_internal(&env)?;
+        owner.require_auth();
+        env.storage().instance().set(&DataKey::AuthContract, &auth_contract);
+        env.events().publish(
+            (symbol_short!("set_auth"), symbol_short!("contract")),
+            auth_contract.clone()
+        );
+        Ok(())
+    }
+    
+    pub fn set_community_contract(env: Env, community_contract: Address) -> Result<(), RegistryError> {
+        let owner = Self::get_owner_internal(&env)?;
+        owner.require_auth();
+        env.storage().instance().set(&DataKey::CommunityContract, &community_contract);
+        env.events().publish(
+            (symbol_short!("set_comm"), symbol_short!("contract")),
+            community_contract.clone()
+        );
+        Ok(())
+    }
+    
+    pub fn register_user(env: Env, user: Address) -> Result<(), RegistryError> {
+        user.require_auth();
+        if env.storage().instance().has(&DataKey::User(user.clone())) {
+            return Err(RegistryError::UserAlreadyRegistered);
+        }
+        env.storage().instance().set(&DataKey::User(user.clone()), &true);
+        
+        // Get existing registry or create new one
+        let mut registry = if let Some(registry_val) = env.storage().instance().get::<DataKey, Vec<Address>>(&DataKey::UserRegistry) {
+            registry_val
+        } else {
+            Vec::new(&env)
         };
         
-        // Get contract address
-        env.storage().get(&DataKey::Contract(contract_type_symbol))
-            .ok_or(Error::ContractNotFound)
-    }
-    
-    /// Add a new admin
-    pub fn add_admin(env: Env, admin: Address) -> Result<(), Error> {
-        // Get owner of this contract
-        let owner = get_owner(&env).ok_or(Error::NotInitialized)?;
+        registry.push_back(user.clone());
+        env.storage().instance().set(&DataKey::UserRegistry, &registry);
         
-        // Check authorization
-        owner.require_auth();
-        
-        // Store admin status
-        env.storage().set(&DataKey::Admin(admin.clone()), &true);
-        
-        // Log event
-        env.events().publish(("add_admin"), admin);
-        
+        env.events().publish(
+            (symbol_short!("register"), symbol_short!("user")),
+            user
+        );
         Ok(())
     }
     
-    /// Remove an admin
-    pub fn remove_admin(env: Env, admin: Address) -> Result<(), Error> {
-        // Get owner of this contract
-        let owner = get_owner(&env).ok_or(Error::NotInitialized)?;
-        
-        // Check authorization
-        owner.require_auth();
-        
-        // Remove admin status
-        env.storage().remove(&DataKey::Admin(admin.clone()));
-        
-        // Log event
-        env.events().publish(("remove_admin"), admin);
-        
-        Ok(())
+    pub fn is_registered(env: Env, user: Address) -> bool {
+        env.storage().instance().has(&DataKey::User(user))
     }
     
-    /// Check if an address is an admin
-    pub fn is_admin(env: Env, address: Address) -> bool {
-        env.storage().get(&DataKey::Admin(address)).unwrap_or(false)
+    pub fn get_data_contract(env: Env) -> Result<Address, RegistryError> {
+        let data_contract = env.storage().instance().get::<DataKey, Address>(&DataKey::DataContract);
+        if let Some(addr) = data_contract {
+            Ok(addr)
+        } else {
+            Err(RegistryError::ContractNotSet)
+        }
+    }
+    
+    pub fn get_auth_contract(env: Env) -> Result<Address, RegistryError> {
+        let auth_contract = env.storage().instance().get::<DataKey, Address>(&DataKey::AuthContract);
+        if let Some(addr) = auth_contract {
+            Ok(addr)
+        } else {
+            Err(RegistryError::ContractNotSet)
+        }
+    }
+    
+    pub fn get_community_contract(env: Env) -> Result<Address, RegistryError> {
+        let community_contract = env.storage().instance().get::<DataKey, Address>(&DataKey::CommunityContract);
+        if let Some(addr) = community_contract {
+            Ok(addr)
+        } else {
+            Err(RegistryError::ContractNotSet)
+        }
+    }
+    
+    pub fn get_users(env: Env) -> Result<Vec<Address>, RegistryError> {
+        let users = env.storage().instance().get::<DataKey, Vec<Address>>(&DataKey::UserRegistry);
+        if let Some(vec) = users {
+            Ok(vec)
+        } else {
+            Ok(Vec::new(&env))
+        }
+    }
+
+    // Internal helper to get owner, not exposed via contract interface
+    fn get_owner_internal(env: &Env) -> Result<Address, RegistryError> {
+        let owner = env.storage().instance().get::<DataKey, Address>(&DataKey::Owner);
+        if let Some(addr) = owner {
+            Ok(addr)
+        } else {
+            Err(RegistryError::NotInitialized)
+        }
     }
 }
 
-/// Get the owner of the contract
-fn get_owner(env: &Env) -> Option<Address> {
-    env.storage().get(&DataKey::Owner)
-}
-
-/// Error types for the registry contract
-#[derive(Debug, Clone)]
-#[contracttype]
-pub enum Error {
-    AlreadyInitialized,
-    NotInitialized,
-    Unauthorized,
-    ContractNotFound,
-}
-
-/// Unit tests for the registry contract
 #[cfg(test)]
 mod test {
     use super::*;
-    use soroban_sdk::testutils::{Address as _, AuthorizedFunction, Events};
-    use soroban_sdk::{vec, Symbol};
+    use soroban_sdk::testutils::{Address as _, Events};
+    use soroban_sdk::{vec, Symbol, IntoVal};
 
     #[test]
     fn test_initialize() {
         let env = Env::default();
+        env.mock_all_auths();
+
         let contract_id = env.register_contract(None, RegistryContract);
+        let client = RegistryContractClient::new(&env, &contract_id);
+        
         let owner = Address::generate(&env);
         
-        // Authorize the call
-        env.mock_all_auths();
+        assert_eq!(client.try_initialize(&owner), Ok(Ok(())));
         
-        // Initialize the contract
-        let client = RegistryContractClient::new(&env, &contract_id);
-        assert!(client.initialize(&owner).is_ok());
-        
-        // Verify event was published
+        let stored_owner: Address = env.storage().instance().get(&DataKey::Owner).unwrap();
+        assert_eq!(stored_owner, owner);
+
         let events = env.events().all();
-        assert_eq!(events.len(), 1);
-        assert_eq!(
-            events[0],
-            (
-                contract_id.clone(),
-                ("initialize", "registry").into_val(&env),
-                owner.into_val(&env)
-            )
-        );
+        assert_eq!(events.len(), 1, "Expected 1 event");
+        
+        let expected_topics = (symbol_short!("init"), symbol_short!("reg")).into_val(&env);
+        let expected_data = owner.clone().into_val(&env); // Clone owner for into_val
+
+        let (event_contract_id, event_topics, event_data) = events.last().unwrap();
+        
+        assert_eq!(event_contract_id, &contract_id);
+        assert_eq!(event_topics, &expected_topics);
+        assert_eq!(event_data, &expected_data);
     }
     
     #[test]
-    fn test_register_contract() {
+    fn test_set_and_get_contracts() {
         let env = Env::default();
-        let contract_id = env.register_contract(None, RegistryContract);
-        let owner = Address::generate(&env);
-        let auth_contract = Address::generate(&env);
-        
-        // Authorize all calls
         env.mock_all_auths();
-        
-        // Initialize the contract
+
+        let contract_id = env.register_contract(None, RegistryContract);
         let client = RegistryContractClient::new(&env, &contract_id);
-        client.initialize(&owner).unwrap();
         
-        // Register Auth contract
-        client.register_contract(&ContractType::Auth, &auth_contract).unwrap();
+        let owner = Address::generate(&env);
+        client.initialize(&owner);
         
-        // Get Auth contract
-        let retrieved_address = client.get_contract(&ContractType::Auth).unwrap();
-        assert_eq!(retrieved_address, auth_contract);
+        let data_addr = Address::generate(&env);
+        let auth_addr = Address::generate(&env);
+        let comm_addr = Address::generate(&env);
+
+        client.set_data_contract(&data_addr);
+        client.set_auth_contract(&auth_addr);
+        client.set_community_contract(&comm_addr);
+
+        assert_eq!(client.get_data_contract(), data_addr);
+        assert_eq!(client.get_auth_contract(), auth_addr);
+        assert_eq!(client.get_community_contract(), comm_addr);
+        
+        let events = env.events().all();
+        assert_eq!(events.len(), 4); 
+    }
+
+    #[test]
+    fn test_register_and_check_user() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register_contract(None, RegistryContract);
+        let client = RegistryContractClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        client.initialize(&owner);
+
+        let user1 = Address::generate(&env);
+        
+        assert!(!client.is_registered(&user1));
+        client.register_user(&user1);
+        assert!(client.is_registered(&user1));
+
+        let users_vec = client.get_users();
+        assert_eq!(users_vec.len(), 1);
+        assert_eq!(users_vec.get_unchecked(0), user1);
+
+        let res = client.try_register_user(&user1);
+        assert_eq!(res, Err(Ok(RegistryError::UserAlreadyRegistered)));
     }
 } 
