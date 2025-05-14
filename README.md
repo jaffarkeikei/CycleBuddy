@@ -78,27 +78,111 @@ CycleBuddy addresses these issues by:
 
 ## 🌱 Getting Started
 
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/cyclebuddy-stellar
+### Prerequisites
 
-# Install dependencies
-npm install
+- Node.js (v18+)
+- npm or yarn
+- [Stellar CLI](https://developers.stellar.org/docs/tools/developer-tools/stellar-cli)
+- [Freighter Wallet](https://www.freighter.app/) with funded testnet account
 
-# Set up environment variables
-cp .env.example .env
+### Setup
 
-# Run development server
+1. Clone this repository:
+   ```
+   git clone https://github.com/your-username/CycleBuddy-stellar.git
+   cd CycleBuddy-stellar
+   ```
+
+2. Install dependencies:
+   ```
+   npm install
+   ```
+
+3. Run the setup script:
+   ```
+   ./scripts/setup-dev-env.sh
+   ```
+   
+   This script will:
+   - Check for required tools
+   - Install Stellar CLI if needed
+   - Set up the Stellar testnet
+
+### Deploying Contracts to Testnet
+
+To deploy the contracts to the Stellar testnet:
+
+1. Make sure you have [Freighter Wallet](https://www.freighter.app/) installed
+2. Fund your testnet account: [Stellar Laboratory](https://laboratory.stellar.org/#account-creator?network=test)
+3. Run the deployment script:
+   ```
+   ./scripts/deploy-contracts.sh
+   ```
+   
+   This script will:
+   - Deploy the Registry, Auth, Data, and Community contracts
+   - Save the contract IDs to a `.env` file
+   - Set up the contracts for use with the app
+
+### Running the App
+
+To run the application:
+
+```
 npm run dev
 ```
+
+The app will be available at: [http://localhost:3000](http://localhost:3000)
+
+## Contract Structure
+
+The application uses four Soroban (Stellar) smart contracts:
+
+1. **Registry Contract**: Central contract registry that tracks the addresses of all other contracts
+2. **Auth Contract**: Handles passkey-based authentication and user identity
+3. **Data Contract**: Stores encrypted health data with privacy controls
+4. **Community Contract**: Manages social and educational features
+
+## Using the Testnet Integration
+
+The application can work in two modes:
+
+1. **Simulated Mode**: When Freighter wallet is not available, the app uses simulated blockchain data
+2. **Testnet Mode**: When Freighter wallet is connected, the app interacts with real contracts on the Stellar testnet
+
+To use the testnet integration:
+
+1. Install [Freighter Wallet](https://www.freighter.app/)
+2. Create and fund a testnet account
+3. Deploy contracts using the provided script
+4. Update your `.env` file with the deployed contract IDs
+5. Restart the application
+
+## Troubleshooting
+
+### Contract ID Issues
+
+If you see errors related to invalid contract IDs:
+
+1. Make sure you've deployed the contracts to testnet
+2. Check that your `.env` file contains the correct contract IDs
+3. Restart the application
+
+### Freighter Connection Issues
+
+If you're having issues connecting to Freighter:
+
+1. Make sure Freighter is installed and unlocked
+2. Switch to the Stellar testnet in Freighter
+3. Refresh the application
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](docs/contributing.md) for details.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 

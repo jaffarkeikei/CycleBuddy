@@ -16,7 +16,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
     "prepare": "husky install",
-    "build:contracts": "cargo build --target wasm32-unknown-unknown --release",
+    "build:contracts": "bash scripts/build-contracts.sh",
+    "deploy:contracts:testnet": "bash scripts/deploy-contracts.sh",
     "deploy:testnet": "stellar-cli deploy --network testnet",
     "deploy:mainnet": "stellar-cli deploy --network mainnet"
   },
@@ -40,7 +41,8 @@
     "@chakra-ui/react": "^2.8.0",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
-    "framer-motion": "^10.15.1"
+    "framer-motion": "^10.15.1",
+    "zustand": "^4.4.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.20",
@@ -85,4 +87,5 @@
     "url": "https://github.com/yourusername/cyclebuddy-stellar/issues"
   },
   "homepage": "https://github.com/yourusername/cyclebuddy-stellar#readme"
-} 
+}
+ 
