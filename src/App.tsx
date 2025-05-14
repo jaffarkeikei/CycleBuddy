@@ -1,18 +1,57 @@
-import { Box, Container, Heading, Text } from '@chakra-ui/react'
+import { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Box } from '@chakra-ui/react';
+
+// Pages
+import IndexPage from './pages/IndexPage';
+import LoginPage from './pages/auth/LoginPage';
+import RegisterPage from './pages/auth/RegisterPage';
+import DashboardPage from './pages/dashboard/DashboardPage';
+
+// Components
+import ProtectedRoute from './components/common/ProtectedRoute';
+import { authService } from './services/auth/authService';
+
+// Test Components
+import ContractTest from './tests/ContractTest';
+import PasskeyTest from './tests/PasskeyTest';
 
 function App() {
+  useEffect(() => {
+    // Initialize auth on app load
+    const initAuth = async () => {
+      await authService.initializeAuth();
+    };
+
+    initAuth();
+  }, []);
+
   return (
-    <Container maxW="container.xl" py={8}>
-      <Box textAlign="center" py={10}>
-        <Heading as="h1" size="2xl" mb={4}>
-          CycleBuddy
-        </Heading>
-        <Text fontSize="xl" color="gray.600">
-          A Web3-powered menstrual health companion that puts privacy and education first.
-        </Text>
+    <Router>
+      <Box minH="100vh" bg="gray.50">
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<IndexPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          
+          {/* Test routes */}
+          <Route path="/test/contract" element={<ContractTest />} />
+          <Route path="/test/passkey" element={<PasskeyTest />} />
+          
+          {/* Protected routes */}
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* Redirect to home page by default */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </Box>
-    </Container>
-  )
+    </Router>
+  );
 }
 
-export default App 
+export default App; 
