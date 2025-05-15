@@ -30,9 +30,9 @@ import { useAuthStore } from '../../services/auth/authService';
 
 // Mock data
 const recentCycleData = [
-  { day: 1, mood: 'Good', symptoms: ['Cramps', 'Fatigue'], date: '2023-09-01' },
-  { day: 2, mood: 'Fair', symptoms: ['Bloating'], date: '2023-09-02' },
-  { day: 3, mood: 'Great', symptoms: [], date: '2023-09-03' },
+  { day: 1, mood: 'Good', symptoms: ['Cramps', 'Fatigue'], date: '2025-09-01' },
+  { day: 2, mood: 'Fair', symptoms: ['Bloating'], date: '2025-09-02' },
+  { day: 3, mood: 'Great', symptoms: [], date: '2025-09-03' },
 ];
 
 // Information cards data

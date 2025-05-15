@@ -194,4 +194,48 @@ We welcome contributions! Please see our [Contributing Guide](docs/contributing.
 
 - Email: bradyalimedi@gmail.com
 
+## Contract Deployment Workflow
+
+### Building and Deploying Contracts
+
+This project uses a streamlined workflow for building and deploying Stellar Soroban contracts. The main tools for contract management are:
+
+1. **Makefile** - Contains all commands for building, testing, and deploying contracts
+2. **DeployContracts Component** - Web UI for downloading contract files and providing deployment instructions
+
+### Common Contract Operations
+
+| Command | Description |
+|---------|-------------|
+| `npm run build:contracts` | Build all contracts and copy to public directory |
+| `npm run test:contracts` | Run all contract tests |
+| `npm run deploy:contracts` | Deploy contracts to Stellar testnet using soroban CLI |
+| `npm run deploy:testnet` | Deploy contracts using stellar CLI and save IDs to .env |
+| `npm run clean` | Clean build artifacts |
+| `npm run optimize:contracts` | Optimize compiled contracts |
+| `npm run generate:bindings` | Generate TypeScript bindings |
+
+### Manual Deployment via Web UI
+
+For a more user-friendly approach, you can use the DeployContracts page in the app:
+
+1. Connect your Freighter wallet
+2. Download each contract WASM file
+3. Follow the on-screen instructions to upload and deploy each contract
+4. Use the contract hash returned by each upload when deploying
+
+This approach is useful when you need to deploy contracts from a different environment than your development machine.
+
+### Deployment Command Details
+
+Under the hood, these commands use the Makefile. To view the specific commands and options:
+
+```bash
+# View available make targets
+make help
+
+# Specify a custom Stellar address for deployment
+make deploy STELLAR_ADDRESS=GBUKOFF6FX6767LKKOD3P7KAS43I3Z7CNUBPCH33YZKPPR53ZDHAHCER
+```
+
 ---
