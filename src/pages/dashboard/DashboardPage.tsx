@@ -58,10 +58,12 @@ import {
   Alert,
   AlertIcon,
   AlertDescription,
+  Spinner,
 } from '@chakra-ui/react';
 import { useAuthStore } from '../../services/auth/authService';
 import { keyframes } from '@emotion/react';
 import { passkeyService } from '../../services/auth/passkeyService';
+import { stellarContractService } from '../../services/stellar/contractService';
 
 // Create a keyframe animation for the gradient
 const animatedGradient = keyframes`
@@ -165,6 +167,8 @@ export const DashboardPage = () => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [currentAction, setCurrentAction] = useState<string | null>(null);
+  const [xlmBalance, setXlmBalance] = useState<number | null>(null);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   
   // Animated card style
   const cardGradient = useColorModeValue(
@@ -184,6 +188,25 @@ export const DashboardPage = () => {
       animation: `${animatedGradient} 2s ease infinite`,
     }
   };
+
+  // Load user data including XLM balance
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoadingBalance(true);
+        const balance = await stellarContractService.getXLMBalance();
+        setXlmBalance(balance);
+      } catch (error) {
+        console.error('Error loading XLM balance:', error);
+        // Use a fallback balance
+        setXlmBalance(0);
+      } finally {
+        setIsLoadingBalance(false);
+      }
+    };
+    
+    loadData();
+  }, []);
 
   // Handle logout
   const handleLogout = () => {
@@ -223,15 +246,35 @@ export const DashboardPage = () => {
       if (!authResult.success) {
         throw new Error("Authentication failed for donation");
       }
-      // TODO: Implement actual donation logic with Stellar Path Payments
-      toast({
-        title: 'Donation Successful',
-        description: 'Thank you for your contribution!',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-      onClose();
+      
+      // Get values from form
+      const initiativeSelect = document.querySelector('select[placeholder="Select initiative"]') as HTMLSelectElement;
+      const amountInput = document.querySelector('input[placeholder="Amount"]') as HTMLInputElement;
+      const currencySelect = document.querySelector('select[placeholder="Select currency"]') as HTMLSelectElement;
+      
+      const initiativeId = initiativeSelect?.value || 'research1';
+      const amount = amountInput?.value ? parseFloat(amountInput.value) : 10;
+      const currency = currencySelect?.value || 'XLM';
+      
+      // Use the Stellar-specific donation implementation
+      const success = await stellarContractService.makeDonation(amount, initiativeId, currency);
+      
+      if (success) {
+        toast({
+          title: 'Donation Successful',
+          description: 'Thank you for your contribution!',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+        onClose();
+        
+        // Refresh the XLM balance
+        const balance = await stellarContractService.getXLMBalance();
+        setXlmBalance(balance);
+      } else {
+        throw new Error("Failed to complete donation");
+      }
     } catch (error) {
       console.error('Error during donation authentication:', error);
       setAuthError(error instanceof Error ? error.message : 'Authentication failed');
@@ -253,14 +296,26 @@ export const DashboardPage = () => {
         throw new Error("Authentication failed");
       }
       
-      toast({
-        title: 'Rewards Claimed',
-        description: `25 XLM has been added to your wallet!`,
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-      onClose();
+      // Use the Stellar-specific rewards claiming implementation
+      const success = await stellarContractService.claimRewards();
+      
+      if (success) {
+        toast({
+          title: 'Rewards Claimed',
+          description: `25 XLM has been added to your wallet!`,
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+        
+        // Refresh the XLM balance
+        const balance = await stellarContractService.getXLMBalance();
+        setXlmBalance(balance);
+        
+        onClose();
+      } else {
+        throw new Error("Failed to claim rewards");
+      }
     } catch (error) {
       console.error('Error during authentication:', error);
       setAuthError(error instanceof Error ? error.message : 'Authentication failed');
@@ -279,15 +334,38 @@ export const DashboardPage = () => {
       if (!authResult.success) {
         throw new Error("Authentication failed for data sharing");
       }
-      // TODO: Implement actual data sharing logic with Stellar multi-sig
-      toast({
-        title: 'Secure Share Created',
-        description: 'Your health data has been securely shared.',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-      onClose();
+      
+      // Get values from form
+      const recipientInput = document.querySelector('input[placeholder="Healthcare provider\'s Stellar address or email"]') as HTMLInputElement;
+      const dataCheckboxes = document.querySelectorAll('input[type="checkbox"]:checked') as NodeListOf<HTMLInputElement>;
+      const durationSelect = document.querySelector('select[placeholder="Select duration"]') as HTMLSelectElement;
+      
+      const recipientAddress = recipientInput?.value || 'example@healthcare.org';
+      const dataTypes = Array.from(dataCheckboxes).map(cb => cb.parentElement?.textContent?.trim() || '');
+      
+      // Convert duration to hours
+      let durationHours = 24; // default
+      if (durationSelect?.value === '1week') {
+        durationHours = 24 * 7;
+      } else if (durationSelect?.value === '1month') {
+        durationHours = 24 * 30;
+      }
+      
+      // Use the Stellar-specific data sharing implementation
+      const success = await stellarContractService.shareHealthData(recipientAddress, dataTypes, durationHours);
+      
+      if (success) {
+        toast({
+          title: 'Secure Share Created',
+          description: 'Your health data has been securely shared.',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+        onClose();
+      } else {
+        throw new Error("Failed to share data");
+      }
     } catch (error) {
       console.error('Error during data sharing authentication:', error);
       setAuthError(error instanceof Error ? error.message : 'Authentication failed');
@@ -306,15 +384,31 @@ export const DashboardPage = () => {
       if (!authResult.success) {
         throw new Error(`Authentication failed for ${actionName}`);
       }
-      // TODO: Implement actual ZK validation logic with Stellar
-      toast({
-        title: 'Validation Processed',
-        description: `Your request for ${actionName.replace('zk-', '')} has been processed.`,
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-      onClose(); // Or update UI to show validation status
+      
+      let validationType = '';
+      if (actionName === 'zk-validate-symptom') {
+        validationType = 'symptoms';
+      } else if (actionName === 'zk-create-validation') {
+        // Get the selected validation type
+        const validationSelect = document.querySelector('select[placeholder="Select validation type"]') as HTMLSelectElement;
+        validationType = validationSelect?.value || 'cycle';
+      }
+      
+      // Use the Stellar-specific ZK validation implementation
+      const success = await stellarContractService.validateDataWithZKP(validationType);
+      
+      if (success) {
+        toast({
+          title: 'Validation Processed',
+          description: `Your request for ${actionName.replace('zk-', '')} has been processed.`,
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+        onClose();
+      } else {
+        throw new Error("Failed to process validation");
+      }
     } catch (error) {
       console.error(`Error during ${actionName} authentication:`, error);
       setAuthError(error instanceof Error ? error.message : 'Authentication failed');
@@ -333,24 +427,51 @@ export const DashboardPage = () => {
       if (!authResult.success) {
         throw new Error(`Authentication failed for ${actionName}`);
       }
-      // TODO: Implement actual data marketplace logic with Stellar
-      let title = 'Action Processed';
-      let description = `Your request for ${actionName.replace('market-', '')} has been processed.`;
+      
+      let success = false;
+      
       if (actionName === 'market-contribute') {
-        title = 'Data Contribution Successful';
-        description = 'Your anonymized data has been contributed.';
+        // Get the selected pool and data types
+        const poolSelect = document.querySelector('select[placeholder="Select research pool"]') as HTMLSelectElement;
+        const poolId = poolSelect?.value || 'cycle';
+        const dataTypes = [poolId]; // In a real app, we'd have specific data types
+        
+        // Use the Stellar-specific data contribution implementation
+        success = await stellarContractService.contributeDataToMarketplace(poolId, dataTypes);
       } else if (actionName === 'market-claim') {
-        title = 'Earnings Claimed';
-        description = 'Your earnings have been added to your wallet.';
+        // Use the Stellar-specific earnings claiming implementation
+        success = await stellarContractService.claimDataMarketplaceEarnings();
+        
+        if (success) {
+          // Refresh the XLM balance
+          const balance = await stellarContractService.getXLMBalance();
+          setXlmBalance(balance);
+        }
       }
-      toast({
-        title,
-        description,
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-      onClose(); // Or update UI accordingly
+      
+      if (success) {
+        let title = 'Action Processed';
+        let description = `Your request for ${actionName.replace('market-', '')} has been processed.`;
+        
+        if (actionName === 'market-contribute') {
+          title = 'Data Contribution Successful';
+          description = 'Your anonymized data has been contributed.';
+        } else if (actionName === 'market-claim') {
+          title = 'Earnings Claimed';
+          description = 'Your earnings have been added to your wallet.';
+        }
+        
+        toast({
+          title,
+          description,
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+        onClose();
+      } else {
+        throw new Error(`Failed to process ${actionName}`);
+      }
     } catch (error) {
       console.error(`Error during ${actionName} authentication:`, error);
       setAuthError(error instanceof Error ? error.message : 'Authentication failed');
@@ -369,15 +490,38 @@ export const DashboardPage = () => {
       if (!authResult.success) {
         throw new Error("Authentication failed for saving health alert settings");
       }
-      // TODO: Implement actual health alert saving logic with Stellar Turrets
-      toast({
-        title: 'Settings Saved',
-        description: 'Your health alert settings have been updated.',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
+      
+      // Get the checked alert types and notification channels
+      const alertCheckboxes = document.querySelectorAll('input[type="checkbox"]:checked') as NodeListOf<HTMLInputElement>;
+      
+      const alertTypes: string[] = [];
+      const notificationChannels: string[] = [];
+      
+      // Separate alert types from notification channels
+      alertCheckboxes.forEach(cb => {
+        const text = cb.parentElement?.textContent?.trim() || '';
+        if (['Irregular Cycle Detection', 'Unusual Symptom Patterns', 'Medication Reminders', 'Health Check Reminders'].includes(text)) {
+          alertTypes.push(text);
+        } else if (['In-App', 'Email', 'Push Notification'].includes(text)) {
+          notificationChannels.push(text);
+        }
       });
-      onClose();
+      
+      // Use the Stellar-specific health alerts implementation
+      const success = await stellarContractService.configureHealthAlerts(alertTypes, notificationChannels);
+      
+      if (success) {
+        toast({
+          title: 'Settings Saved',
+          description: 'Your health alert settings have been updated.',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+        onClose();
+      } else {
+        throw new Error("Failed to save health alert settings");
+      }
     } catch (error) {
       console.error('Error during health alert settings authentication:', error);
       setAuthError(error instanceof Error ? error.message : 'Authentication failed');
@@ -772,6 +916,16 @@ export const DashboardPage = () => {
           <Text color="gray.600">your secure menstrual health companion</Text>
         </Box>
         <HStack>
+          <Stat textAlign="right" mr={4}>
+            <StatLabel>Wallet Balance</StatLabel>
+            <StatNumber fontSize="lg">
+              {isLoadingBalance ? (
+                <Spinner size="sm" color="purple.500" mr={2} />
+              ) : (
+                `${xlmBalance?.toFixed(2) || '0.00'} XLM`
+              )}
+            </StatNumber>
+          </Stat>
           <Badge colorScheme="purple" fontSize="0.8em" p={2} borderRadius="full">
             Secured with Stellar Blockchain
           </Badge>
