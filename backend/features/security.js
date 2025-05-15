@@ -1,35 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
+const { authenticateUser, generateToken, formatUserResponse } = require('../middlewares/auth');
 
 function setupSecurityRoutes(pool) {
-  // Helper function to generate JWT token
-  const generateToken = (user) => {
-    const secret = process.env.JWT_SECRET || 'hackathon_secret';
-    const payload = { 
-      userId: user.id, 
-      username: user.username, 
-      email: user.email || user.mail 
-    };
-    
-    return jwt.sign(payload, secret, { expiresIn: '24h' });
-  };
-  
-  // Helper function to format user response
-  const formatUserResponse = (user, token, message) => {
-    return {
-      message,
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        name: user.name,
-        lastName: user.lastName || user.last_name,
-        email: user.email || user.mail
-      }
-    };
-  };
-
   // User creation route
   router.post('/user', async (req, res) => {
     try {
@@ -66,10 +39,10 @@ function setupSecurityRoutes(pool) {
         email: mail
       };
       
-      // Generate token
+      // Generate token using imported function
       const token = generateToken(newUser);
       
-      // Return token and user data
+      // Return token and user data using imported function
       res.status(200).json(formatUserResponse(newUser, token, 'User created and logged in'));
     } catch (error) {
       if (error.code === 'ER_DUP_ENTRY') {
@@ -101,40 +74,18 @@ function setupSecurityRoutes(pool) {
       
       const user = users[0];
       
-      // Generate token
+      // Generate token using imported function
       const token = generateToken(user);
       
-      // Return response
+      // Return response using imported function
       res.status(200).json(formatUserResponse(user, token, 'Login successful'));
     } catch (error) {
       res.status(500).json({ error: 'Authentication failed', details: error.message });
     }
   });
 
-  // Add token verification middleware (can be used for protected routes)
-  const verifyToken = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Authorization token is required' });
-    }
-    
-    const token = authHeader.split(' ')[1];
-    
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'hackathon_secret');
-      req.user = decoded;
-      next();
-    } catch (error) {
-      if (error.name === 'TokenExpiredError') {
-        return res.status(401).json({ error: 'Token expired' });
-      }
-      return res.status(403).json({ error: 'Invalid token' });
-    }
-  };
-
-  // Example of a protected route
-  router.get('/me', verifyToken, (req, res) => {
+  // Example of a protected route using the authenticateUser middleware
+  router.get('/me', authenticateUser, (req, res) => {
     res.json({ user: req.user });
   });
 

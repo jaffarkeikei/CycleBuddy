@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
+const { authenticateUser } = require('../middlewares/auth');
 
 function setupCycleRoutes(pool) {
+    
     // User creation route
-    router.post('/cycle', async (req, res) => {
+    router.post('/cycle', authenticateUser, async (req, res) => {
         try {
             const {
                 init,
@@ -22,16 +23,8 @@ function setupCycleRoutes(pool) {
                 end || null
             ];
 
-            //Get user_id from the token
-            const token = req.headers['authorization']?.split(' ')[1];
-            if (!token) {
-                return res.status(401).json({ error: 'Unauthorized' });
-            }
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'hackathon_secret');
-            const user_id = decoded.userId;
-            if (!user_id) {
-                return res.status(401).json({ error: 'Unauthorized' });
-            }
+            // User ID is now available from the middleware
+            const user_id = req.userId;
 
             const [result] = await pool.execute(
                 `INSERT INTO il_app_cycles
@@ -50,7 +43,7 @@ function setupCycleRoutes(pool) {
     });
 
     // Get all cycles from a user
-    router.get('/cycle', async (req, res) => {
+    router.get('/cycle', authenticateUser, async (req, res) => {
         try {
             const {
                 init,
@@ -63,16 +56,8 @@ function setupCycleRoutes(pool) {
                 end || null
             ];
 
-            //Get user_id from the token
-            const token = req.headers['authorization']?.split(' ')[1];
-            if (!token) {
-                return res.status(401).json({ error: 'Unauthorized' });
-            }
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'hackathon_secret');
-            const user_id = decoded.userId;
-            if (!user_id) {
-                return res.status(401).json({ error: 'Unauthorized' });
-            }
+            // User ID is now available from the middleware
+            const user_id = req.userId;
 
             let sqlQuery = `SELECT * FROM il_app_cycles WHERE user_id = ? AND status = 1`;
             let queryParams = [user_id];
@@ -98,20 +83,12 @@ function setupCycleRoutes(pool) {
     });
 
     // Delete a cycle by ID
-    router.delete('/cycle/:id', async (req, res) => {
+    router.delete('/cycle/:id', authenticateUser, async (req, res) => {
         try {
             const cycleId = req.params.id;
             
-            // Get user_id from the token
-            const token = req.headers['authorization']?.split(' ')[1];
-            if (!token) {
-                return res.status(401).json({ error: 'Unauthorized' });
-            }
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'hackathon_secret');
-            const user_id = decoded.userId;
-            if (!user_id) {
-                return res.status(401).json({ error: 'Unauthorized' });
-            }
+            // User ID is now available from the middleware
+            const user_id = req.userId;
 
             // First check if the cycle belongs to the user
             const [checkResult] = await pool.execute(

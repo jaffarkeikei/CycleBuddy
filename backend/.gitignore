@@ -46,3 +46,6 @@ ecosystem.config.js
 
 # Optional: If using Prisma
 .prisma/
+
+# Google Cloud credentials
+config/google-credentials.json

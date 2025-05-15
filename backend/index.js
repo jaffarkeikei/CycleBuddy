@@ -6,6 +6,7 @@ const PORT = process.env.PORT || 3000;
 const router = express.Router();
 const setupSecurityRoutes = require('./features/security');
 const setupCycleRoutes = require('./features/cycle');
+const setupProductivityRoutes = require('./features/productivity');
 
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -26,6 +27,9 @@ app.use('/api', setupSecurityRoutes(pool));
 
 // Register the cycle routes
 app.use('/api', setupCycleRoutes(pool));
+
+// Register the productivity routes
+app.use('/api', setupProductivityRoutes(pool));
 
 // Start the server
 app.listen(PORT, () => {
