@@ -145,7 +145,7 @@ export const DashboardPage = () => {
           <Heading as="h1" size="xl" bgGradient={cardGradient} bgClip="text">
             Welcome, {user?.username || 'User'}
           </Heading>
-          <Text color="gray.600">Your secure menstrual health companion</Text>
+          <Text color="gray.600">your secure menstrual health companion</Text>
         </Box>
         <HStack>
           <Badge colorScheme="purple" fontSize="0.8em" p={2} borderRadius="full">

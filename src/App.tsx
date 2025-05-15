@@ -41,12 +41,6 @@ function App() {
     >
       <Router>
         <Box minH="100vh" bg="gray.50">
-          <div>
-            <nav className="bg-gray-800 text-white p-4">
-              <Link to="/deploy" className="hover:text-gray-300">Deploy Contracts</Link>
-            </nav>
-          </div>
-
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<LoginPage />} />
