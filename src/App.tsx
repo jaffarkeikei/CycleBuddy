@@ -10,6 +10,12 @@ import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import { DeployContracts } from './pages/DeployContracts';
+import TestContract from './pages/TestContract';
+import { VerifyContracts } from './pages/VerifyContracts';
+import DeployAndInitialize from './pages/DeployAndInitialize';
+import DonationPage from './pages/features/DonationPage';
+import RewardsPage from './pages/features/RewardsPage';
+import DataSharingPage from './pages/features/DataSharingPage';
 
 // Components
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -22,10 +28,10 @@ import ContractTest from './tests/ContractTest';
 import PasskeyTest from './tests/PasskeyTest';
 
 // Advanced Stellar Features Placeholders
-const DonationPage = () => <Box p={8}>Donation Feature Page</Box>;
-const DataSharingPage = () => <Box p={8}>Data Sharing Feature Page</Box>;
-const RewardsPage = () => <Box p={8}>Rewards Feature Page</Box>;
-const ZKValidationPage = () => <Box p={8}>Zero-Knowledge Validation Feature Page</Box>;
+// const DonationPage = () => <Box p={8}>Donation Feature Page</Box>;
+// const DataSharingPage = () => <Box p={8}>Data Sharing Feature Page</Box>;
+// const RewardsPage = () => <Box p={8}>Rewards Feature Page</Box>;
+const ZKValidationPage = () => <Box p={8}>ZK Validation Feature Page</Box>;
 const DataMarketplacePage = () => <Box p={8}>Data Marketplace Feature Page</Box>;
 const HealthAlertsPage = () => <Box p={8}>Health Alerts Feature Page</Box>;
 
@@ -46,6 +52,7 @@ function App() {
       chains={[testnetChainMetadata]}
       activeChain={testnetChainMetadata}
       connectors={connectors}
+      appName="CycleBuddy"
     >
       <Router>
         <Box minH="100vh" bg="gray.50">
@@ -57,6 +64,9 @@ function App() {
             {/* Test routes */}
             <Route path="/test/contract" element={<ContractTest />} />
             <Route path="/test/passkey" element={<PasskeyTest />} />
+            <Route path="/test/contracts-check" element={<TestContract />} />
+            <Route path="/test/verify-contracts" element={<VerifyContracts />} />
+            <Route path="/test/deploy-initialize" element={<DeployAndInitialize />} />
             
             {/* Contract deployment route */}
             <Route path="/deploy" element={<DeployContracts />} />

@@ -55,9 +55,13 @@ import {
   Textarea,
   Select,
   Checkbox,
+  Alert,
+  AlertIcon,
+  AlertDescription,
 } from '@chakra-ui/react';
 import { useAuthStore } from '../../services/auth/authService';
 import { keyframes } from '@emotion/react';
+import { passkeyService } from '../../services/auth/passkeyService';
 
 // Create a keyframe animation for the gradient
 const animatedGradient = keyframes`
@@ -158,6 +162,9 @@ export const DashboardPage = () => {
   const [cycleData] = useState(recentCycleData);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [activeFeature, setActiveFeature] = useState<any>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [currentAction, setCurrentAction] = useState<string | null>(null);
   
   // Animated card style
   const cardGradient = useColorModeValue(
@@ -207,6 +214,179 @@ export const DashboardPage = () => {
     loadData();
   }, []);
   
+  const handleDonate = async () => {
+    setCurrentAction('donate');
+    setIsAuthenticating(true);
+    setAuthError(null);
+    try {
+      const authResult = await passkeyService.authenticateWithPasskey();
+      if (!authResult.success) {
+        throw new Error("Authentication failed for donation");
+      }
+      // TODO: Implement actual donation logic with Stellar Path Payments
+      toast({
+        title: 'Donation Successful',
+        description: 'Thank you for your contribution!',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      onClose();
+    } catch (error) {
+      console.error('Error during donation authentication:', error);
+      setAuthError(error instanceof Error ? error.message : 'Authentication failed');
+    } finally {
+      setIsAuthenticating(false);
+      setCurrentAction(null);
+    }
+  };
+
+  const handleClaimRewards = async () => {
+    setCurrentAction('claimRewards');
+    setIsAuthenticating(true);
+    setAuthError(null);
+    
+    try {
+      const authResult = await passkeyService.authenticateWithPasskey();
+      
+      if (!authResult.success) {
+        throw new Error("Authentication failed");
+      }
+      
+      toast({
+        title: 'Rewards Claimed',
+        description: `25 XLM has been added to your wallet!`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      onClose();
+    } catch (error) {
+      console.error('Error during authentication:', error);
+      setAuthError(error instanceof Error ? error.message : 'Authentication failed');
+    } finally {
+      setIsAuthenticating(false);
+      setCurrentAction(null);
+    }
+  };
+
+  const handleCreateSecureShare = async () => {
+    setCurrentAction('dataSharing');
+    setIsAuthenticating(true);
+    setAuthError(null);
+    try {
+      const authResult = await passkeyService.authenticateWithPasskey();
+      if (!authResult.success) {
+        throw new Error("Authentication failed for data sharing");
+      }
+      // TODO: Implement actual data sharing logic with Stellar multi-sig
+      toast({
+        title: 'Secure Share Created',
+        description: 'Your health data has been securely shared.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      onClose();
+    } catch (error) {
+      console.error('Error during data sharing authentication:', error);
+      setAuthError(error instanceof Error ? error.message : 'Authentication failed');
+    } finally {
+      setIsAuthenticating(false);
+      setCurrentAction(null);
+    }
+  };
+
+  const handleValidationAction = async (actionName: string) => {
+    setCurrentAction(actionName);
+    setIsAuthenticating(true);
+    setAuthError(null);
+    try {
+      const authResult = await passkeyService.authenticateWithPasskey();
+      if (!authResult.success) {
+        throw new Error(`Authentication failed for ${actionName}`);
+      }
+      // TODO: Implement actual ZK validation logic with Stellar
+      toast({
+        title: 'Validation Processed',
+        description: `Your request for ${actionName.replace('zk-', '')} has been processed.`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      onClose(); // Or update UI to show validation status
+    } catch (error) {
+      console.error(`Error during ${actionName} authentication:`, error);
+      setAuthError(error instanceof Error ? error.message : 'Authentication failed');
+    } finally {
+      setIsAuthenticating(false);
+      setCurrentAction(null);
+    }
+  };
+
+  const handleDataMarketplaceAction = async (actionName: string) => {
+    setCurrentAction(actionName);
+    setIsAuthenticating(true);
+    setAuthError(null);
+    try {
+      const authResult = await passkeyService.authenticateWithPasskey();
+      if (!authResult.success) {
+        throw new Error(`Authentication failed for ${actionName}`);
+      }
+      // TODO: Implement actual data marketplace logic with Stellar
+      let title = 'Action Processed';
+      let description = `Your request for ${actionName.replace('market-', '')} has been processed.`;
+      if (actionName === 'market-contribute') {
+        title = 'Data Contribution Successful';
+        description = 'Your anonymized data has been contributed.';
+      } else if (actionName === 'market-claim') {
+        title = 'Earnings Claimed';
+        description = 'Your earnings have been added to your wallet.';
+      }
+      toast({
+        title,
+        description,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      onClose(); // Or update UI accordingly
+    } catch (error) {
+      console.error(`Error during ${actionName} authentication:`, error);
+      setAuthError(error instanceof Error ? error.message : 'Authentication failed');
+    } finally {
+      setIsAuthenticating(false);
+      setCurrentAction(null);
+    }
+  };
+
+  const handleSaveHealthAlertSettings = async () => {
+    setCurrentAction('healthAlerts');
+    setIsAuthenticating(true);
+    setAuthError(null);
+    try {
+      const authResult = await passkeyService.authenticateWithPasskey();
+      if (!authResult.success) {
+        throw new Error("Authentication failed for saving health alert settings");
+      }
+      // TODO: Implement actual health alert saving logic with Stellar Turrets
+      toast({
+        title: 'Settings Saved',
+        description: 'Your health alert settings have been updated.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      onClose();
+    } catch (error) {
+      console.error('Error during health alert settings authentication:', error);
+      setAuthError(error instanceof Error ? error.message : 'Authentication failed');
+    } finally {
+      setIsAuthenticating(false);
+      setCurrentAction(null);
+    }
+  };
+
   // Modal content based on feature type
   const renderModalContent = () => {
     if (!activeFeature) return null;
@@ -240,10 +420,24 @@ export const DashboardPage = () => {
                     <option value="btc">BTC</option>
                   </Select>
                 </FormControl>
+                {authError && currentAction === 'donate' && (
+                  <Alert status="error" borderRadius="md">
+                    <AlertIcon />
+                    <AlertDescription>{authError}</AlertDescription>
+                  </Alert>
+                )}
               </VStack>
             </ModalBody>
             <ModalFooter>
-              <Button sx={animatedGradientStyle} mr={3}>Donate Now</Button>
+              <Button 
+                sx={animatedGradientStyle} 
+                mr={3} 
+                onClick={handleDonate}
+                isLoading={isAuthenticating && currentAction === 'donate'}
+                loadingText="Authenticating..."
+              >
+                Donate Now
+              </Button>
               <Button variant="ghost" onClick={onClose}>Cancel</Button>
             </ModalFooter>
           </>
@@ -277,10 +471,24 @@ export const DashboardPage = () => {
                     <option value="1month">1 month</option>
                   </Select>
                 </FormControl>
+                {authError && currentAction === 'dataSharing' && (
+                  <Alert status="error" borderRadius="md">
+                    <AlertIcon />
+                    <AlertDescription>{authError}</AlertDescription>
+                  </Alert>
+                )}
               </VStack>
             </ModalBody>
             <ModalFooter>
-              <Button sx={animatedGradientStyle} mr={3}>Create Secure Share</Button>
+              <Button 
+                sx={animatedGradientStyle} 
+                mr={3} 
+                onClick={handleCreateSecureShare}
+                isLoading={isAuthenticating && currentAction === 'dataSharing'}
+                loadingText="Authenticating..."
+              >
+                Create Secure Share
+              </Button>
               <Button variant="ghost" onClick={onClose}>Cancel</Button>
             </ModalFooter>
           </>
@@ -319,10 +527,25 @@ export const DashboardPage = () => {
                     <Text>+30 XLM</Text>
                   </HStack>
                 </VStack>
+                
+                {authError && currentAction === 'claimRewards' && (
+                  <Alert status="error" borderRadius="md">
+                    <AlertIcon />
+                    <AlertDescription>{authError}</AlertDescription>
+                  </Alert>
+                )}
               </VStack>
             </ModalBody>
             <ModalFooter>
-              <Button sx={animatedGradientStyle} mr={3}>Claim Rewards</Button>
+              <Button 
+                sx={animatedGradientStyle} 
+                mr={3} 
+                onClick={handleClaimRewards}
+                isLoading={isAuthenticating && currentAction === 'claimRewards'}
+                loadingText="Authenticating..."
+              >
+                Claim Rewards
+              </Button>
               <Button variant="ghost" onClick={onClose}>Close</Button>
             </ModalFooter>
           </>
@@ -354,7 +577,15 @@ export const DashboardPage = () => {
                     <ListItem>
                       <HStack justifyContent="space-between">
                         <Text>Symptom Pattern Analysis</Text>
-                        <Button size="xs" sx={animatedGradientStyle}>Validate Now</Button>
+                        <Button 
+                          size="xs" 
+                          sx={animatedGradientStyle}
+                          onClick={() => handleValidationAction('zk-validate-symptom')}
+                          isLoading={isAuthenticating && currentAction === 'zk-validate-symptom'}
+                          loadingText="Auth..."
+                        >
+                          Validate Now
+                        </Button>
                       </HStack>
                     </ListItem>
                   </List>
@@ -369,11 +600,25 @@ export const DashboardPage = () => {
                     <option value="symptoms">Symptom Pattern Analysis</option>
                   </Select>
                 </FormControl>
+                {authError && currentAction?.startsWith('zk-') && (
+                  <Alert status="error" borderRadius="md">
+                    <AlertIcon />
+                    <AlertDescription>{authError}</AlertDescription>
+                  </Alert>
+                )}
               </VStack>
             </ModalBody>
             <ModalFooter>
-              <Button sx={animatedGradientStyle} mr={3}>Create Validation</Button>
-              <Button variant="ghost" onClick={onClose}>Close</Button>
+              <Button 
+                sx={animatedGradientStyle} 
+                mr={3}
+                onClick={() => handleValidationAction('zk-create-validation')}
+                isLoading={isAuthenticating && currentAction === 'zk-create-validation'}
+                loadingText="Authenticating..."
+              >
+                Create Validation
+              </Button>
+              <Button variant="ghost" onClick={onClose}>Cancel</Button>
             </ModalFooter>
           </>
         );
@@ -405,7 +650,14 @@ export const DashboardPage = () => {
                         <Text fontSize="sm">
                           By contributing, you'll share anonymized data with researchers while maintaining privacy through zero-knowledge proofs.
                         </Text>
-                        <Button sx={animatedGradientStyle}>Contribute Data</Button>
+                        <Button 
+                          sx={animatedGradientStyle}
+                          onClick={() => handleDataMarketplaceAction('market-contribute')}
+                          isLoading={isAuthenticating && currentAction === 'market-contribute'}
+                          loadingText="Authenticating..."
+                        >
+                          Contribute Data
+                        </Button>
                       </VStack>
                     </TabPanel>
                     <TabPanel px={0}>
@@ -414,10 +666,24 @@ export const DashboardPage = () => {
                         <StatNumber>12.5 XLM</StatNumber>
                         <StatHelpText>From 3 research contributions</StatHelpText>
                       </Stat>
-                      <Button sx={animatedGradientStyle} size="sm">Claim Earnings</Button>
+                      <Button 
+                        sx={animatedGradientStyle} 
+                        size="sm"
+                        onClick={() => handleDataMarketplaceAction('market-claim')}
+                        isLoading={isAuthenticating && currentAction === 'market-claim'}
+                        loadingText="Authenticating..."
+                      >
+                        Claim Earnings
+                      </Button>
                     </TabPanel>
                   </TabPanels>
                 </Tabs>
+                {authError && currentAction?.startsWith('market-') && (
+                  <Alert status="error" borderRadius="md" mt={4}>
+                    <AlertIcon />
+                    <AlertDescription>{authError}</AlertDescription>
+                  </Alert>
+                )}
               </VStack>
             </ModalBody>
             <ModalFooter>
@@ -468,10 +734,24 @@ export const DashboardPage = () => {
                     </ListItem>
                   </List>
                 </Box>
+                {authError && currentAction === 'healthAlerts' && (
+                  <Alert status="error" borderRadius="md" mt={4}>
+                    <AlertIcon />
+                    <AlertDescription>{authError}</AlertDescription>
+                  </Alert>
+                )}
               </VStack>
             </ModalBody>
             <ModalFooter>
-              <Button sx={animatedGradientStyle} mr={3}>Save Settings</Button>
+              <Button 
+                sx={animatedGradientStyle} 
+                mr={3}
+                onClick={handleSaveHealthAlertSettings}
+                isLoading={isAuthenticating && currentAction === 'healthAlerts'}
+                loadingText="Authenticating..."
+              >
+                Save Settings
+              </Button>
               <Button variant="ghost" onClick={onClose}>Cancel</Button>
             </ModalFooter>
           </>

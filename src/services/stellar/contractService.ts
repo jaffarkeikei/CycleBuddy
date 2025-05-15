@@ -73,6 +73,13 @@ class StellarContractService {
   private auth: Contract | null = null;
   private data: Contract | null = null;
   private community: Contract | null = null;
+  // Additional contracts for features
+  private donation: Contract | null = null;
+  private dataSharing: Contract | null = null;
+  private rewards: Contract | null = null;
+  private zkValidation: Contract | null = null;
+  private dataMarketplace: Contract | null = null;
+  private healthAlerts: Contract | null = null;
   private isInitialized: boolean = false;
 
   constructor() {
@@ -121,66 +128,57 @@ class StellarContractService {
     try {
       // In a real app, we would check if the contracts are deployed
       // and verify their interfaces
-      console.log('Initializing Stellar Contract Service');
+      console.log('Initializing Stellar Contract Service with real deployed contracts');
       
-      // Check that we have valid contracts
-      let allContractsValid = true;
+      // Check that we have valid contracts and use the actual contract IDs from environment
+      this.registry = new Contract(CONTRACT_IDS.REGISTRY);
+      this.auth = new Contract(CONTRACT_IDS.AUTH);
+      this.data = new Contract(CONTRACT_IDS.DATA);
+      this.community = new Contract(CONTRACT_IDS.COMMUNITY);
       
-      if (!this.registry) {
-        console.log('Registry contract not initialized');
-        allContractsValid = false;
+      // Additional deployed contracts for features
+      // Only initialize if the contract IDs are valid
+      const donationId = import.meta.env.VITE_DONATION_CONTRACT_ID;
+      if (this.isValidContract(donationId)) {
+        console.log('Initializing Donation contract');
+        this.donation = new Contract(donationId);
       }
       
-      if (!this.auth) {
-        console.log('Auth contract not initialized');
-        allContractsValid = false;
+      const dataSharingId = import.meta.env.VITE_DATA_SHARING_CONTRACT_ID;
+      if (this.isValidContract(dataSharingId)) {
+        console.log('Initializing Data Sharing contract');
+        this.dataSharing = new Contract(dataSharingId);
       }
       
-      if (!this.data) {
-        console.log('Data contract not initialized');
-        allContractsValid = false;
+      const rewardsId = import.meta.env.VITE_REWARDS_CONTRACT_ID;
+      if (this.isValidContract(rewardsId)) {
+        console.log('Initializing Rewards contract');
+        this.rewards = new Contract(rewardsId);
       }
       
-      if (!this.community) {
-        console.log('Community contract not initialized');
-        allContractsValid = false;
+      const zkValidationId = import.meta.env.VITE_ZK_VALIDATION_CONTRACT_ID;
+      if (this.isValidContract(zkValidationId)) {
+        console.log('Initializing ZK Validation contract');
+        this.zkValidation = new Contract(zkValidationId);
       }
       
-      if (!allContractsValid) {
-        console.log('Using real token contracts as placeholders');
-        
-        // If you've deployed your contracts using the provided script, 
-        // you should have valid contract IDs in your environment variables.
-        // Otherwise, we'll use these placeholder token contract IDs
-        const PLACEHOLDER_CONTRACT_ID = 'CDODVYRDXBFQS5M45IV4UULMCEGWPVIQ3MK7JJV3XPS7AUGED3ZXKUIP';
-        
-        this.registry = new Contract(CONTRACT_IDS.REGISTRY || PLACEHOLDER_CONTRACT_ID);
-        this.auth = new Contract(CONTRACT_IDS.AUTH || PLACEHOLDER_CONTRACT_ID);
-        this.data = new Contract(CONTRACT_IDS.DATA || PLACEHOLDER_CONTRACT_ID);
-        this.community = new Contract(CONTRACT_IDS.COMMUNITY || PLACEHOLDER_CONTRACT_ID);
+      const dataMarketplaceId = import.meta.env.VITE_DATA_MARKETPLACE_CONTRACT_ID;
+      if (this.isValidContract(dataMarketplaceId)) {
+        console.log('Initializing Data Marketplace contract');
+        this.dataMarketplace = new Contract(dataMarketplaceId);
+      }
+      
+      const healthAlertsId = import.meta.env.VITE_HEALTH_ALERTS_CONTRACT_ID;
+      if (this.isValidContract(healthAlertsId)) {
+        console.log('Initializing Health Alerts contract');
+        this.healthAlerts = new Contract(healthAlertsId);
       }
       
       this.isInitialized = true;
       return true;
     } catch (error) {
       console.error('Failed to initialize Stellar Contract Service:', error);
-      
-      // For demo purposes, use a known valid contract ID as fallback
-      try {
-        const PLACEHOLDER_CONTRACT_ID = 'CDODVYRDXBFQS5M45IV4UULMCEGWPVIQ3MK7JJV3XPS7AUGED3ZXKUIP';
-        
-        console.log('Using placeholder contract IDs due to initialization failure');
-        this.registry = new Contract(PLACEHOLDER_CONTRACT_ID);
-        this.auth = new Contract(PLACEHOLDER_CONTRACT_ID);
-        this.data = new Contract(PLACEHOLDER_CONTRACT_ID);
-        this.community = new Contract(PLACEHOLDER_CONTRACT_ID);
-        
-        this.isInitialized = true;
-        return true;
-      } catch (fallbackError) {
-        console.error('Even fallback initialization failed:', fallbackError);
-        return false;
-      }
+      return false;
     }
   }
 

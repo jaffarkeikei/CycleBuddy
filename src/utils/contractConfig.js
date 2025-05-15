@@ -31,15 +31,20 @@ export const getContractIds = async (config = { useSimulation: true, network: 't
   }
 
   try {
-    // In production, load from actual deployed contracts
-    // This would typically involve fetching from some API or a locally stored config
-    // For now, we're using mock data
-    if (config.network === 'testnet') {
-      // These would normally be fetched from .soroban/deployed/
-      return SIMULATED_CONTRACT_IDS;
-    }
-
-    throw new Error(`Network '${config.network}' not supported`);
+    // In production, load from environmental variables
+    console.log('Using actual deployed contract IDs');
+    return {
+      registryId: import.meta.env.VITE_REGISTRY_CONTRACT_ID,
+      authId: import.meta.env.VITE_AUTH_CONTRACT_ID,
+      dataId: import.meta.env.VITE_DATA_CONTRACT_ID,
+      communityId: import.meta.env.VITE_COMMUNITY_CONTRACT_ID,
+      donationId: import.meta.env.VITE_DONATION_CONTRACT_ID,
+      dataSharingId: import.meta.env.VITE_DATA_SHARING_CONTRACT_ID,
+      rewardsId: import.meta.env.VITE_REWARDS_CONTRACT_ID,
+      zkValidationId: import.meta.env.VITE_ZK_VALIDATION_CONTRACT_ID,
+      dataMarketplaceId: import.meta.env.VITE_DATA_MARKETPLACE_CONTRACT_ID,
+      healthAlertsId: import.meta.env.VITE_HEALTH_ALERTS_CONTRACT_ID
+    };
   } catch (error) {
     console.error('Error loading contract IDs:', error);
     // Fall back to simulated IDs if there's an error
@@ -118,6 +123,6 @@ function createMockClient(type) {
 
 // Export configuration
 export const defaultConfig = {
-  useSimulation: true,  // Default to simulation mode for safer development
+  useSimulation: false,  // Using real deployed contracts
   network: 'testnet',
 }; 
