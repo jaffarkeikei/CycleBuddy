@@ -21,6 +21,14 @@ import { authService } from './services/auth/authService';
 import ContractTest from './tests/ContractTest';
 import PasskeyTest from './tests/PasskeyTest';
 
+// Advanced Stellar Features Placeholders
+const DonationPage = () => <Box p={8}>Donation Feature Page</Box>;
+const DataSharingPage = () => <Box p={8}>Data Sharing Feature Page</Box>;
+const RewardsPage = () => <Box p={8}>Rewards Feature Page</Box>;
+const ZKValidationPage = () => <Box p={8}>Zero-Knowledge Validation Feature Page</Box>;
+const DataMarketplacePage = () => <Box p={8}>Data Marketplace Feature Page</Box>;
+const HealthAlertsPage = () => <Box p={8}>Health Alerts Feature Page</Box>;
+
 const connectors = [freighter()];
 
 function App() {
@@ -57,6 +65,38 @@ function App() {
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Advanced Stellar Features Routes */}
+            <Route path="/features/donate" element={
+              <ProtectedRoute>
+                <DonationPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/features/share" element={
+              <ProtectedRoute>
+                <DataSharingPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/features/rewards" element={
+              <ProtectedRoute>
+                <RewardsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/features/validate" element={
+              <ProtectedRoute>
+                <ZKValidationPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/features/marketplace" element={
+              <ProtectedRoute>
+                <DataMarketplacePage />
+              </ProtectedRoute>
+            } />
+            <Route path="/features/alerts" element={
+              <ProtectedRoute>
+                <HealthAlertsPage />
               </ProtectedRoute>
             } />
             

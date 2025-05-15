@@ -4,6 +4,12 @@ members = [
     "auth",
     "data",
     "community",
+    "donation",
+    "data-sharing",
+    "rewards",
+    "zk-validation",
+    "data-marketplace",
+    "health-alerts"
 ]
 resolver = "2"
 

@@ -23,7 +23,13 @@
     "deploy:testnet": "make deploy-save",
     "deploy:mainnet": "stellar-cli deploy --network mainnet",
     "optimize:contracts": "make optimize",
-    "generate:bindings": "make bindings"
+    "generate:bindings": "make bindings",
+    "test:donation": "cd contracts/donation && cargo test",
+    "test:data-sharing": "cd contracts/data-sharing && cargo test",
+    "test:rewards": "cd contracts/rewards && cargo test",
+    "test:zk-validation": "cd contracts/zk-validation && cargo test",
+    "test:data-marketplace": "cd contracts/data-marketplace && cargo test",
+    "test:health-alerts": "cd contracts/health-alerts && cargo test"
   },
   "dependencies": {
     "@chakra-ui/react": "^2.8.0",

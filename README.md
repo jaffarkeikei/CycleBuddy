@@ -41,6 +41,73 @@ graph TD
 - **Anonymous Community**: Safe space for sharing and support
 - **Web3 Integration**: Utilizing blockchain for data sovereignty
 
+## Advanced Stellar Features
+
+- **Path Payments for Donations**: Enable users to donate to health initiatives using Stellar's path payment feature, allowing donations in any currency that gets automatically converted.
+- **Time-bound Multi-signature Data Sharing**: Share health data with medical professionals using time-limited multi-signature authorization that automatically expires.
+- **Claimable Balances for Rewards**: Implement a reward system using Stellar's claimable balances, providing incentives for consistent tracking and educational achievements.
+- **Zero-knowledge Proofs for Private Data Validation**: Validate health metrics without revealing sensitive data through zero-knowledge proofs on the Stellar network.
+- **Data Monetization with Revenue Sharing**: Allow users to anonymously monetize their aggregated health data with pharmaceutical research, with transparent revenue sharing.
+- **Turret-based Automated Health Alerts**: Deploy Stellar Turrets to monitor health data and trigger automated alerts for concerning patterns without compromising privacy.
+
+## Advanced Features Implementation
+
+CycleBuddy now includes cutting-edge blockchain features that leverage Stellar's advanced capabilities:
+
+### 1. Donation System with Path Payments
+
+The donation system allows users to support menstrual health research initiatives in any currency they prefer. Using Stellar's path payment operations, donations are automatically converted to the recipient's preferred currency, enabling global contributions without currency barriers.
+
+**Implementation:**
+- Smart contract with path payment optimization
+- Initiative registry with automatic currency conversion
+- Transparent tracking of funds and impact
+
+### 2. Time-bound Data Sharing
+
+Medical data sharing is secured through Stellar's multi-signature capabilities, allowing users to grant healthcare providers access to specific data for a limited time period. When the time expires, access is automatically revoked.
+
+**Implementation:**
+- Multi-signature transactions with time bounds
+- Granular access controls for specific data types
+- Automatic expiration without requiring user action
+
+### 3. Achievement Rewards with Claimable Balances
+
+The app rewards consistent tracking and educational achievements through Stellar's claimable balances. Users earn tokens for completing tasks, which are securely held in the blockchain until claimed.
+
+**Implementation:**
+- Achievements system with milestone tracking
+- Reward distribution through claimable balances
+- Visual progress indicators and streak tracking
+
+### 4. Zero-knowledge Health Validations
+
+Users can validate health metrics for research or medical purposes without revealing the actual data. For example, proving cycle regularity without exposing cycle dates or confirming age-appropriate information without revealing birth date.
+
+**Implementation:**
+- Zero-knowledge proof generation for health metrics
+- Validation certificates stored on-chain
+- Privacy-preserving health metric verification
+
+### 5. Data Marketplace with Revenue Sharing
+
+Users can contribute anonymized data to research pools and receive compensation through transparent revenue sharing. Researchers purchase access to aggregated data pools while users maintain privacy and control.
+
+**Implementation:**
+- Anonymized data contribution mechanisms
+- Transparent revenue distribution through smart contracts
+- Research data pool management system
+
+### 6. Health Alerts via Stellar Turrets
+
+Automated health monitoring using Stellar Turrets allows for analysis of health patterns without compromising data privacy. The system can detect irregular cycles, concerning symptom patterns, or potential health issues.
+
+**Implementation:**
+- Stellar Turret integration for automated monitoring
+- Configurable alert thresholds and notification preferences
+- Privacy-preserving pattern recognition algorithms
+
 ## 🛠 Technical Stack
 
 - **Blockchain**: Stellar Network
@@ -136,12 +203,18 @@ The app will be available at: [http://localhost:3000](http://localhost:3000)
 
 ## Contract Structure
 
-The application uses four Soroban (Stellar) smart contracts:
+The application uses the following Soroban (Stellar) smart contracts:
 
 1. **Registry Contract**: Central contract registry that tracks the addresses of all other contracts
 2. **Auth Contract**: Handles passkey-based authentication and user identity
 3. **Data Contract**: Stores encrypted health data with privacy controls
 4. **Community Contract**: Manages social and educational features
+5. **Donation Contract**: Enables path payments for donations to health initiatives
+6. **Data Sharing Contract**: Manages time-bound multi-signature data sharing
+7. **Rewards Contract**: Implements claimable balances for achievement rewards
+8. **ZK Validation Contract**: Facilitates zero-knowledge proofs for private data validation
+9. **Data Marketplace Contract**: Enables data monetization with revenue sharing
+10. **Health Alerts Contract**: Manages turret-based automated health alerts
 
 ## Using the Testnet Integration
 
@@ -198,7 +271,7 @@ We welcome contributions! Please see our [Contributing Guide](docs/contributing.
 
 ### Building and Deploying Contracts
 
-This project uses a streamlined workflow for building and deploying Stellar Soroban contracts. The main tools for contract management are:
+This project uses a streamlined workflow for building and testing Stellar Soroban contracts. The main tools for contract management are:
 
 1. **Makefile** - Contains all commands for building, testing, and deploying contracts
 2. **DeployContracts Component** - Web UI for downloading contract files and providing deployment instructions

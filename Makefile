@@ -25,6 +25,12 @@ REGISTRY_WASM = registry_contract.wasm
 AUTH_WASM = cyclebuddy_auth_contract.wasm
 DATA_WASM = cyclebuddy_data_contract.wasm
 COMMUNITY_WASM = cyclebuddy_community_contract.wasm
+DONATION_WASM = donation_contract.wasm
+DATA_SHARING_WASM = data_sharing_contract.wasm
+REWARDS_WASM = rewards_contract.wasm
+ZK_VALIDATION_WASM = zk_validation_contract.wasm
+DATA_MARKETPLACE_WASM = data_marketplace_contract.wasm
+HEALTH_ALERTS_WASM = health_alerts_contract.wasm
 
 # Output paths for public directory
 PUBLIC_CONTRACTS_DIR = public/contracts
@@ -44,6 +50,12 @@ build:
 	@cp contracts/target/wasm32-unknown-unknown/release/$(AUTH_WASM) $(PUBLIC_CONTRACTS_DIR)/
 	@cp contracts/target/wasm32-unknown-unknown/release/$(DATA_WASM) $(PUBLIC_CONTRACTS_DIR)/
 	@cp contracts/target/wasm32-unknown-unknown/release/$(COMMUNITY_WASM) $(PUBLIC_CONTRACTS_DIR)/
+	@cp contracts/target/wasm32-unknown-unknown/release/$(DONATION_WASM) $(PUBLIC_CONTRACTS_DIR)/
+	@cp contracts/target/wasm32-unknown-unknown/release/$(DATA_SHARING_WASM) $(PUBLIC_CONTRACTS_DIR)/
+	@cp contracts/target/wasm32-unknown-unknown/release/$(REWARDS_WASM) $(PUBLIC_CONTRACTS_DIR)/
+	@cp contracts/target/wasm32-unknown-unknown/release/$(ZK_VALIDATION_WASM) $(PUBLIC_CONTRACTS_DIR)/
+	@cp contracts/target/wasm32-unknown-unknown/release/$(DATA_MARKETPLACE_WASM) $(PUBLIC_CONTRACTS_DIR)/
+	@cp contracts/target/wasm32-unknown-unknown/release/$(HEALTH_ALERTS_WASM) $(PUBLIC_CONTRACTS_DIR)/
 	@echo "Contracts built and copied to $(PUBLIC_CONTRACTS_DIR)/"
 
 # Test all contracts
@@ -101,6 +113,60 @@ deploy: build
 	echo "Community Contract ID: $$COMMUNITY_ID" && \
 	echo $$COMMUNITY_ID > .soroban/deployed/community_id.txt
 	
+	@echo "\nDeploying Donation contract..."
+	@DONATION_ID=$$(soroban contract deploy \
+		--wasm contracts/target/wasm32-unknown-unknown/release/$(DONATION_WASM) \
+		--source-account $(STELLAR_ADDRESS) \
+		--network-passphrase $(NETWORK_PASSPHRASE) \
+		--rpc-url $(RPC_URL)) && \
+	echo "Donation Contract ID: $$DONATION_ID" && \
+	echo $$DONATION_ID > .soroban/deployed/donation_id.txt
+	
+	@echo "\nDeploying Data Sharing contract..."
+	@DATA_SHARING_ID=$$(soroban contract deploy \
+		--wasm contracts/target/wasm32-unknown-unknown/release/$(DATA_SHARING_WASM) \
+		--source-account $(STELLAR_ADDRESS) \
+		--network-passphrase $(NETWORK_PASSPHRASE) \
+		--rpc-url $(RPC_URL)) && \
+	echo "Data Sharing Contract ID: $$DATA_SHARING_ID" && \
+	echo $$DATA_SHARING_ID > .soroban/deployed/data_sharing_id.txt
+	
+	@echo "\nDeploying Rewards contract..."
+	@REWARDS_ID=$$(soroban contract deploy \
+		--wasm contracts/target/wasm32-unknown-unknown/release/$(REWARDS_WASM) \
+		--source-account $(STELLAR_ADDRESS) \
+		--network-passphrase $(NETWORK_PASSPHRASE) \
+		--rpc-url $(RPC_URL)) && \
+	echo "Rewards Contract ID: $$REWARDS_ID" && \
+	echo $$REWARDS_ID > .soroban/deployed/rewards_id.txt
+	
+	@echo "\nDeploying ZK Validation contract..."
+	@ZK_VALIDATION_ID=$$(soroban contract deploy \
+		--wasm contracts/target/wasm32-unknown-unknown/release/$(ZK_VALIDATION_WASM) \
+		--source-account $(STELLAR_ADDRESS) \
+		--network-passphrase $(NETWORK_PASSPHRASE) \
+		--rpc-url $(RPC_URL)) && \
+	echo "ZK Validation Contract ID: $$ZK_VALIDATION_ID" && \
+	echo $$ZK_VALIDATION_ID > .soroban/deployed/zk_validation_id.txt
+	
+	@echo "\nDeploying Data Marketplace contract..."
+	@DATA_MARKETPLACE_ID=$$(soroban contract deploy \
+		--wasm contracts/target/wasm32-unknown-unknown/release/$(DATA_MARKETPLACE_WASM) \
+		--source-account $(STELLAR_ADDRESS) \
+		--network-passphrase $(NETWORK_PASSPHRASE) \
+		--rpc-url $(RPC_URL)) && \
+	echo "Data Marketplace Contract ID: $$DATA_MARKETPLACE_ID" && \
+	echo $$DATA_MARKETPLACE_ID > .soroban/deployed/data_marketplace_id.txt
+	
+	@echo "\nDeploying Health Alerts contract..."
+	@HEALTH_ALERTS_ID=$$(soroban contract deploy \
+		--wasm contracts/target/wasm32-unknown-unknown/release/$(HEALTH_ALERTS_WASM) \
+		--source-account $(STELLAR_ADDRESS) \
+		--network-passphrase $(NETWORK_PASSPHRASE) \
+		--rpc-url $(RPC_URL)) && \
+	echo "Health Alerts Contract ID: $$HEALTH_ALERTS_ID" && \
+	echo $$HEALTH_ALERTS_ID > .soroban/deployed/health_alerts_id.txt
+	
 	@echo "\nCreating .env file with contract addresses..."
 	@echo "VITE_STELLAR_NETWORK=testnet" > .env
 	@echo "VITE_STELLAR_RPC_URL=$(RPC_URL)" >> .env
@@ -109,6 +175,12 @@ deploy: build
 	@echo "VITE_AUTH_CONTRACT_ID=$$(cat .soroban/deployed/auth_id.txt)" >> .env
 	@echo "VITE_DATA_CONTRACT_ID=$$(cat .soroban/deployed/data_id.txt)" >> .env
 	@echo "VITE_COMMUNITY_CONTRACT_ID=$$(cat .soroban/deployed/community_id.txt)" >> .env
+	@echo "VITE_DONATION_CONTRACT_ID=$$(cat .soroban/deployed/donation_id.txt)" >> .env
+	@echo "VITE_DATA_SHARING_CONTRACT_ID=$$(cat .soroban/deployed/data_sharing_id.txt)" >> .env
+	@echo "VITE_REWARDS_CONTRACT_ID=$$(cat .soroban/deployed/rewards_id.txt)" >> .env
+	@echo "VITE_ZK_VALIDATION_CONTRACT_ID=$$(cat .soroban/deployed/zk_validation_id.txt)" >> .env
+	@echo "VITE_DATA_MARKETPLACE_CONTRACT_ID=$$(cat .soroban/deployed/data_marketplace_id.txt)" >> .env
+	@echo "VITE_HEALTH_ALERTS_CONTRACT_ID=$$(cat .soroban/deployed/health_alerts_id.txt)" >> .env
 	@echo "VITE_RP_ID=localhost" >> .env
 	@echo "VITE_RP_NAME=CycleBuddy" >> .env
 	@echo "VITE_RP_ORIGIN=http://localhost:3000" >> .env
@@ -118,6 +190,12 @@ deploy: build
 	@echo "Auth Contract ID: $$(cat .soroban/deployed/auth_id.txt)"
 	@echo "Data Contract ID: $$(cat .soroban/deployed/data_id.txt)"
 	@echo "Community Contract ID: $$(cat .soroban/deployed/community_id.txt)"
+	@echo "Donation Contract ID: $$(cat .soroban/deployed/donation_id.txt)"
+	@echo "Data Sharing Contract ID: $$(cat .soroban/deployed/data_sharing_id.txt)"
+	@echo "Rewards Contract ID: $$(cat .soroban/deployed/rewards_id.txt)"
+	@echo "ZK Validation Contract ID: $$(cat .soroban/deployed/zk_validation_id.txt)"
+	@echo "Data Marketplace Contract ID: $$(cat .soroban/deployed/data_marketplace_id.txt)"
+	@echo "Health Alerts Contract ID: $$(cat .soroban/deployed/health_alerts_id.txt)"
 
 # Default target
 all: build
@@ -129,6 +207,12 @@ optimize: build
 	@stellar contract optimize --wasm $(PUBLIC_CONTRACTS_DIR)/$(AUTH_WASM)
 	@stellar contract optimize --wasm $(PUBLIC_CONTRACTS_DIR)/$(DATA_WASM)
 	@stellar contract optimize --wasm $(PUBLIC_CONTRACTS_DIR)/$(COMMUNITY_WASM)
+	@stellar contract optimize --wasm $(PUBLIC_CONTRACTS_DIR)/$(DONATION_WASM)
+	@stellar contract optimize --wasm $(PUBLIC_CONTRACTS_DIR)/$(DATA_SHARING_WASM)
+	@stellar contract optimize --wasm $(PUBLIC_CONTRACTS_DIR)/$(REWARDS_WASM)
+	@stellar contract optimize --wasm $(PUBLIC_CONTRACTS_DIR)/$(ZK_VALIDATION_WASM)
+	@stellar contract optimize --wasm $(PUBLIC_CONTRACTS_DIR)/$(DATA_MARKETPLACE_WASM)
+	@stellar contract optimize --wasm $(PUBLIC_CONTRACTS_DIR)/$(HEALTH_ALERTS_WASM)
 	@echo "Contracts optimized!"
 
 # Deploy using stellar CLI and save IDs
@@ -153,6 +237,30 @@ deploy-save: build
 	@COMMUNITY_ID=$$(stellar contract deploy --wasm $(PUBLIC_CONTRACTS_DIR)/$(COMMUNITY_WASM) --source $(STELLAR_ADDRESS)) && \
 	echo "Community Contract ID: $$COMMUNITY_ID" && \
 	
+	@echo "\nDeploying Donation contract..."
+	@DONATION_ID=$$(stellar contract deploy --wasm $(PUBLIC_CONTRACTS_DIR)/$(DONATION_WASM) --source $(STELLAR_ADDRESS)) && \
+	echo "Donation Contract ID: $$DONATION_ID" && \
+	
+	@echo "\nDeploying Data Sharing contract..."
+	@DATA_SHARING_ID=$$(stellar contract deploy --wasm $(PUBLIC_CONTRACTS_DIR)/$(DATA_SHARING_WASM) --source $(STELLAR_ADDRESS)) && \
+	echo "Data Sharing Contract ID: $$DATA_SHARING_ID" && \
+	
+	@echo "\nDeploying Rewards contract..."
+	@REWARDS_ID=$$(stellar contract deploy --wasm $(PUBLIC_CONTRACTS_DIR)/$(REWARDS_WASM) --source $(STELLAR_ADDRESS)) && \
+	echo "Rewards Contract ID: $$REWARDS_ID" && \
+	
+	@echo "\nDeploying ZK Validation contract..."
+	@ZK_VALIDATION_ID=$$(stellar contract deploy --wasm $(PUBLIC_CONTRACTS_DIR)/$(ZK_VALIDATION_WASM) --source $(STELLAR_ADDRESS)) && \
+	echo "ZK Validation Contract ID: $$ZK_VALIDATION_ID" && \
+	
+	@echo "\nDeploying Data Marketplace contract..."
+	@DATA_MARKETPLACE_ID=$$(stellar contract deploy --wasm $(PUBLIC_CONTRACTS_DIR)/$(DATA_MARKETPLACE_WASM) --source $(STELLAR_ADDRESS)) && \
+	echo "Data Marketplace Contract ID: $$DATA_MARKETPLACE_ID" && \
+	
+	@echo "\nDeploying Health Alerts contract..."
+	@HEALTH_ALERTS_ID=$$(stellar contract deploy --wasm $(PUBLIC_CONTRACTS_DIR)/$(HEALTH_ALERTS_WASM) --source $(STELLAR_ADDRESS)) && \
+	echo "Health Alerts Contract ID: $$HEALTH_ALERTS_ID" && \
+	
 	@echo "\nCreating .env file with contract addresses..." && \
 	echo "VITE_STELLAR_NETWORK=testnet" > .env && \
 	echo "VITE_STELLAR_RPC_URL=https://soroban-testnet.stellar.org" >> .env && \
@@ -161,6 +269,12 @@ deploy-save: build
 	echo "VITE_AUTH_CONTRACT_ID=$$AUTH_ID" >> .env && \
 	echo "VITE_DATA_CONTRACT_ID=$$DATA_ID" >> .env && \
 	echo "VITE_COMMUNITY_CONTRACT_ID=$$COMMUNITY_ID" >> .env && \
+	echo "VITE_DONATION_CONTRACT_ID=$$DONATION_ID" >> .env && \
+	echo "VITE_DATA_SHARING_CONTRACT_ID=$$DATA_SHARING_ID" >> .env && \
+	echo "VITE_REWARDS_CONTRACT_ID=$$REWARDS_ID" >> .env && \
+	echo "VITE_ZK_VALIDATION_CONTRACT_ID=$$ZK_VALIDATION_ID" >> .env && \
+	echo "VITE_DATA_MARKETPLACE_CONTRACT_ID=$$DATA_MARKETPLACE_ID" >> .env && \
+	echo "VITE_HEALTH_ALERTS_CONTRACT_ID=$$HEALTH_ALERTS_ID" >> .env && \
 	echo "VITE_RP_ID=localhost" >> .env && \
 	echo "VITE_RP_NAME=CycleBuddy" >> .env && \
 	echo "VITE_RP_ORIGIN=http://localhost:3000" >> .env && \
@@ -187,6 +301,30 @@ bindings: build
 	@stellar contract bindings typescript \
 		--wasm $(PUBLIC_CONTRACTS_DIR)/$(COMMUNITY_WASM) \
 		--output-dir ./src/bindings/community \
+		--overwrite
+	@stellar contract bindings typescript \
+		--wasm $(PUBLIC_CONTRACTS_DIR)/$(DONATION_WASM) \
+		--output-dir ./src/bindings/donation \
+		--overwrite
+	@stellar contract bindings typescript \
+		--wasm $(PUBLIC_CONTRACTS_DIR)/$(DATA_SHARING_WASM) \
+		--output-dir ./src/bindings/data-sharing \
+		--overwrite
+	@stellar contract bindings typescript \
+		--wasm $(PUBLIC_CONTRACTS_DIR)/$(REWARDS_WASM) \
+		--output-dir ./src/bindings/rewards \
+		--overwrite
+	@stellar contract bindings typescript \
+		--wasm $(PUBLIC_CONTRACTS_DIR)/$(ZK_VALIDATION_WASM) \
+		--output-dir ./src/bindings/zk-validation \
+		--overwrite
+	@stellar contract bindings typescript \
+		--wasm $(PUBLIC_CONTRACTS_DIR)/$(DATA_MARKETPLACE_WASM) \
+		--output-dir ./src/bindings/data-marketplace \
+		--overwrite
+	@stellar contract bindings typescript \
+		--wasm $(PUBLIC_CONTRACTS_DIR)/$(HEALTH_ALERTS_WASM) \
+		--output-dir ./src/bindings/health-alerts \
 		--overwrite
 	@echo "TypeScript bindings generated in src/bindings/"
 
