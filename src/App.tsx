@@ -9,6 +9,7 @@ import { testnetChainMetadata } from './config/soroban';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
+import { DeployContracts } from './pages/DeployContracts';
 
 // Components
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -54,6 +55,9 @@ function App() {
             {/* Test routes */}
             <Route path="/test/contract" element={<ContractTest />} />
             <Route path="/test/passkey" element={<PasskeyTest />} />
+            
+            {/* Contract deployment route */}
+            <Route path="/deploy" element={<DeployContracts />} />
             
             {/* Protected routes */}
             <Route path="/dashboard" element={

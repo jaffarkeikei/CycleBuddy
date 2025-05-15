@@ -18,10 +18,19 @@ import {
   AlertIcon,
   AlertTitle,
   AlertDescription,
+  useColorModeValue,
 } from '@chakra-ui/react';
+import { keyframes } from '@emotion/react';
 import { Logo } from '../../components/common/Logo';
 import { useAuthStore } from '../../services/auth/authService';
 import { passkeyService } from '../../services/auth/passkeyService';
+
+// Create a keyframe animation for the gradient
+const animatedGradient = keyframes`
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+`;
 
 export const LoginPage = () => {
   const [username, setUsername] = useState('');
@@ -30,6 +39,19 @@ export const LoginPage = () => {
   const { login, error } = useAuthStore();
   const navigate = useNavigate();
   const toast = useToast();
+
+  // Animated button style
+  const animatedGradientStyle = {
+    bgGradient: 'linear(to-r, #8A2BE2, #D53F8C, #8A2BE2)',
+    bgSize: '200% 100%',
+    animation: `${animatedGradient} 3s ease infinite`,
+    color: 'white',
+    _hover: {
+      bgGradient: 'linear(to-r, #8A2BE2, #D53F8C, #8A2BE2)',
+      bgSize: '200% 100%',
+      animation: `${animatedGradient} 2s ease infinite`,
+    }
+  };
 
   // Add a timeout effect to detect long-running operations
   useEffect(() => {
@@ -144,12 +166,12 @@ export const LoginPage = () => {
 
               <Button
                 type="submit"
-                colorScheme="teal"
                 size="lg"
                 width="full"
                 isLoading={isSubmitting}
                 loadingText={longOperation ? "Still working..." : "Signing In"}
                 mt={4}
+                sx={animatedGradientStyle}
               >
                 Sign In with Passkey
               </Button>
@@ -159,7 +181,7 @@ export const LoginPage = () => {
 
         <HStack pt={4}>
           <Text>Don't have an account?</Text>
-          <Link as={RouterLink} to="/register" color="teal.500">
+          <Link as={RouterLink} to="/register" color="#D53F8C">
             Register now
           </Link>
         </HStack>
