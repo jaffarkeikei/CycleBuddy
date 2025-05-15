@@ -1012,6 +1012,670 @@ class StellarContractService {
       return false;
     }
   }
+
+  // ========== AI Health Insights Methods ==========
+
+  /**
+   * Get user's health insights
+   */
+  public async getUserHealthInsights(): Promise<any[]> {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // For demo purposes, we'll return mock insights
+      return [
+        {
+          id: '1',
+          user: 'user123',
+          insight_type: 'Informational',
+          title: 'Cycle Regularity Improving',
+          description: 'Your cycle has shown improved regularity over the past 3 months.',
+          recommendations: ['Continue your current lifestyle habits.'],
+          confidence: 85,
+          timestamp: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 days ago
+          verified: false,
+          related_data_types: ['cycle_length']
+        },
+        {
+          id: '2',
+          user: 'user123',
+          insight_type: 'Advisory',
+          title: 'Potential Symptom Pattern',
+          description: 'We\'ve detected a pattern between certain foods and increased cramps.',
+          recommendations: [
+            'Consider tracking your diet more closely.',
+            'Discuss with healthcare provider if pattern continues.'
+          ],
+          confidence: 70,
+          timestamp: Date.now() - 15 * 24 * 60 * 60 * 1000, // 15 days ago
+          verified: false,
+          related_data_types: ['symptoms', 'diet']
+        },
+        {
+          id: '3',
+          user: 'user123',
+          insight_type: 'Alert',
+          title: 'Unusual Cycle Length',
+          description: 'Your last cycle was significantly longer than your average. This could be due to stress, diet changes, or other factors.',
+          recommendations: [
+            'Continue tracking to see if this pattern persists',
+            'Consider consulting with a healthcare provider if this continues',
+            'Review any lifestyle changes in the last month'
+          ],
+          confidence: 90,
+          timestamp: Date.now() - 5 * 24 * 60 * 60 * 1000, // 5 days ago
+          verified: true,
+          related_data_types: ['cycle_length', 'stress_levels']
+        }
+      ];
+    } catch (error) {
+      console.error('Error getting health insights:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get available AI models
+   */
+  public async getAvailableAIModels(): Promise<any[]> {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // For demo purposes, we'll return mock models
+      return [
+        {
+          id: 'model1',
+          name: 'Cycle Pattern Analyzer',
+          version: '1.2',
+          description: 'Analyzes cycle patterns to detect irregularities and potential health issues.',
+          data_types: ['cycle_length', 'symptoms', 'mood'],
+          turret_id: 'turret1',
+          created_at: Date.now() - 120 * 24 * 60 * 60 * 1000,
+          last_updated: Date.now() - 30 * 24 * 60 * 60 * 1000,
+          active: true
+        },
+        {
+          id: 'model2',
+          name: 'Symptom Correlation Engine',
+          version: '2.0',
+          description: 'Identifies correlations between symptoms, diet, activity, and menstrual health.',
+          data_types: ['symptoms', 'diet', 'activity', 'cycle_length'],
+          turret_id: 'turret2',
+          created_at: Date.now() - 90 * 24 * 60 * 60 * 1000,
+          last_updated: Date.now() - 15 * 24 * 60 * 60 * 1000,
+          active: true
+        },
+        {
+          id: 'model3',
+          name: 'Health Indicator Predictor',
+          version: '1.5',
+          description: 'Predicts potential health indicators based on historical cycle data.',
+          data_types: ['cycle_length', 'flow_intensity', 'symptoms', 'vital_signs'],
+          turret_id: 'turret1',
+          created_at: Date.now() - 60 * 24 * 60 * 60 * 1000,
+          last_updated: Date.now() - 10 * 24 * 60 * 60 * 1000,
+          active: true
+        }
+      ];
+    } catch (error) {
+      console.error('Error getting AI models:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Generate health insights
+   */
+  public async generateHealthInsights(modelId: string): Promise<boolean> {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // In a real implementation, this would call the AI Health Insights contract
+      console.log(`Generating insights using model: ${modelId}`);
+      
+      // Simulate successful insight generation
+      return true;
+    } catch (error) {
+      console.error('Error generating health insights:', error);
+      return false;
+    }
+  }
+
+  // ========== NFT Education Methods ==========
+
+  /**
+   * Get educational modules
+   */
+  public async getEducationalModules(): Promise<any[]> {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // For demo purposes, we'll return mock modules
+      return [
+        {
+          id: 'module1',
+          title: 'Understanding Your Cycle Basics',
+          description: 'Learn the fundamentals of menstrual health and cycle tracking.',
+          level: 1,
+          topics: ['Cycle Phases', 'Tracking Basics', 'Period Symptoms'],
+          prereq_modules: [],
+          completion_requirements: 'Complete the quiz with a score of 80% or higher',
+          nft_metadata: {
+            name: 'Cycle Fundamentals Certificate',
+            description: 'Awarded for completion of the Understanding Your Cycle Basics module',
+            image_url: 'https://example.com/nft1.png',
+            level: 1,
+            topics: ['Education', 'Menstrual Health'],
+            issuer: 'CycleBuddy Academy',
+            verification_url: 'https://verify.cyclebuddy.com/nft/'
+          },
+          created_at: Date.now() - 90 * 24 * 60 * 60 * 1000,
+          active: true
+        },
+        {
+          id: 'module2',
+          title: 'Nutrition and Your Cycle',
+          description: 'Explore how nutrition impacts your menstrual health and overall wellbeing.',
+          level: 2,
+          topics: ['Nutrition', 'Hormonal Balance', 'Diet Tips'],
+          prereq_modules: ['module1'],
+          completion_requirements: 'Complete all lessons and the final assessment',
+          nft_metadata: {
+            name: 'Cycle Nutrition Specialist',
+            description: 'Awarded for mastering the relationship between nutrition and menstrual health',
+            image_url: 'https://example.com/nft2.png',
+            level: 2,
+            topics: ['Nutrition', 'Menstrual Health'],
+            issuer: 'CycleBuddy Academy',
+            verification_url: 'https://verify.cyclebuddy.com/nft/'
+          },
+          created_at: Date.now() - 60 * 24 * 60 * 60 * 1000,
+          active: true
+        },
+        {
+          id: 'module3',
+          title: 'Advanced Hormonal Health',
+          description: 'Dive deep into hormonal influences on your cycle and overall health.',
+          level: 3,
+          topics: ['Hormones', 'Endocrine System', 'Hormonal Disorders'],
+          prereq_modules: ['module1', 'module2'],
+          completion_requirements: 'Complete all module tasks and the final project',
+          nft_metadata: {
+            name: 'Hormonal Health Expert',
+            description: 'Awarded for advanced understanding of hormonal health and its implications',
+            image_url: 'https://example.com/nft3.png',
+            level: 3,
+            topics: ['Hormones', 'Women\'s Health', 'Education'],
+            issuer: 'CycleBuddy Academy',
+            verification_url: 'https://verify.cyclebuddy.com/nft/'
+          },
+          created_at: Date.now() - 30 * 24 * 60 * 60 * 1000,
+          active: true
+        },
+        {
+          id: 'module4',
+          title: 'Reproductive Health Fundamentals',
+          description: 'Learn essential information about reproductive health and fertility awareness.',
+          level: 4,
+          topics: ['Reproductive System', 'Fertility', 'Contraception'],
+          prereq_modules: ['module1', 'module3'],
+          completion_requirements: 'Complete all lessons, quizzes, and the final examination',
+          nft_metadata: {
+            name: 'Reproductive Health Specialist',
+            description: 'Awarded for mastery of reproductive health fundamentals',
+            image_url: 'https://example.com/nft4.png',
+            level: 4,
+            topics: ['Reproductive Health', 'Fertility Awareness', 'Education'],
+            issuer: 'CycleBuddy Academy',
+            verification_url: 'https://verify.cyclebuddy.com/nft/'
+          },
+          created_at: Date.now() - 20 * 24 * 60 * 60 * 1000,
+          active: true
+        },
+        {
+          id: 'module5',
+          title: 'Mental Health and Your Cycle',
+          description: 'Understand the connections between your menstrual cycle and mental wellbeing.',
+          level: 2,
+          topics: ['Mental Health', 'Mood Tracking', 'Self-Care Strategies'],
+          prereq_modules: ['module1'],
+          completion_requirements: 'Complete all lessons and submit the reflection project',
+          nft_metadata: {
+            name: 'Cycle Mental Health Advocate',
+            description: 'Awarded for understanding the relationship between mental health and menstrual cycles',
+            image_url: 'https://example.com/nft5.png',
+            level: 2,
+            topics: ['Mental Health', 'Self-Care', 'Education'],
+            issuer: 'CycleBuddy Academy',
+            verification_url: 'https://verify.cyclebuddy.com/nft/'
+          },
+          created_at: Date.now() - 15 * 24 * 60 * 60 * 1000,
+          active: true
+        }
+      ];
+    } catch (error) {
+      console.error('Error getting educational modules:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get user's module progress
+   */
+  public async getUserModuleProgress(): Promise<any[]> {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // For demo purposes, we'll return mock progress
+      return [
+        {
+          module_id: 'module1',
+          status: 'Completed',
+          progress: 100,
+          score: 95,
+          completed_tasks: 5,
+          time_spent: 120,
+          attempts: 1,
+          started_at: Date.now() - 75 * 24 * 60 * 60 * 1000,
+          completed_at: Date.now() - 70 * 24 * 60 * 60 * 1000,
+          nft_issued: true,
+          nft_asset: 'NFT-123-Basics'
+        },
+        {
+          module_id: 'module2',
+          status: 'InProgress',
+          progress: 60,
+          score: 0,
+          completed_tasks: 3,
+          time_spent: 45,
+          attempts: 1,
+          started_at: Date.now() - 30 * 24 * 60 * 60 * 1000,
+          completed_at: null,
+          nft_issued: false,
+          nft_asset: null
+        }
+      ];
+    } catch (error) {
+      console.error('Error getting user module progress:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get user's NFTs
+   */
+  public async getUserNFTs(): Promise<any[]> {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // For demo purposes, we'll return mock NFTs
+      return [
+        {
+          asset_id: 'NFT-123-Basics',
+          name: 'Cycle Fundamentals Certificate',
+          description: 'Awarded for completion of the Understanding Your Cycle Basics module',
+          image_url: 'https://example.com/nft1.png',
+          level: 1,
+          topics: ['Education', 'Menstrual Health'],
+          issuer: 'CycleBuddy Academy',
+          verification_url: 'https://verify.cyclebuddy.com/nft/',
+          issued_at: Date.now() - 70 * 24 * 60 * 60 * 1000
+        }
+      ];
+    } catch (error) {
+      console.error('Error getting user NFTs:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get partner benefits
+   */
+  public async getPartnerBenefits(): Promise<any[]> {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // For demo purposes, we'll return mock benefits
+      return [
+        {
+          id: 'benefit1',
+          partner_id: 'partner1',
+          partner_name: 'Women\'s Health Clinic',
+          title: 'Free Consultation',
+          description: 'Receive a free initial consultation with one of our health professionals.',
+          required_modules: [
+            { id: 'module1', title: 'Understanding Your Cycle Basics' }
+          ],
+          benefit_details: 'One-time free consultation (30 minutes) with any of our registered healthcare providers.',
+          benefit_type: { type: 'Service', service_name: 'Health Consultation' },
+          valid_from: Date.now() - 90 * 24 * 60 * 60 * 1000,
+          valid_until: Date.now() + 90 * 24 * 60 * 60 * 1000,
+          active: true,
+          eligible: true,
+          redemption_url: 'https://whc.example.com/redeem'
+        },
+        {
+          id: 'benefit2',
+          partner_id: 'partner2',
+          partner_name: 'Wellness Essentials',
+          title: '20% Discount on Products',
+          description: 'Get 20% off on all menstrual health products in our online store.',
+          required_modules: [
+            { id: 'module1', title: 'Understanding Your Cycle Basics' },
+            { id: 'module2', title: 'Nutrition and Your Cycle' }
+          ],
+          benefit_details: '20% discount applicable to all products in the "Menstrual Health" category. One-time use per customer.',
+          benefit_type: { type: 'Discount', percentage: 20 },
+          valid_from: Date.now() - 60 * 24 * 60 * 60 * 1000,
+          valid_until: null,
+          active: true,
+          eligible: false,
+          redemption_url: 'https://wellness.example.com/redeem'
+        },
+        {
+          id: 'benefit3',
+          partner_id: 'partner3',
+          partner_name: 'Health Research Institute',
+          title: 'Research Study Participation',
+          description: 'Priority access to participate in paid research studies on women\'s health.',
+          required_modules: [
+            { id: 'module3', title: 'Advanced Hormonal Health' },
+            { id: 'module4', title: 'Reproductive Health Fundamentals' }
+          ],
+          benefit_details: 'Priority notification and guaranteed spot in upcoming research studies with compensation ranging from $50-$200 per study.',
+          benefit_type: { type: 'Access', resource: 'Research Studies' },
+          valid_from: Date.now() - 30 * 24 * 60 * 60 * 1000,
+          valid_until: Date.now() + 180 * 24 * 60 * 60 * 1000,
+          active: true,
+          eligible: false,
+          redemption_url: 'https://hri.example.com/studies/join'
+        }
+      ];
+    } catch (error) {
+      console.error('Error getting partner benefits:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Start an educational module
+   */
+  public async startEducationalModule(moduleId: string): Promise<boolean> {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // In a real implementation, this would call the NFT Education contract
+      console.log(`Starting module: ${moduleId}`);
+      
+      // Simulate successful module start
+      return true;
+    } catch (error) {
+      console.error('Error starting educational module:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Update module progress
+   */
+  public async updateModuleProgress(
+    moduleId: string,
+    progress: number,
+    score?: number,
+    completedTasks?: number,
+    timeSpent?: number
+  ): Promise<boolean> {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // In a real implementation, this would call the NFT Education contract
+      console.log(`Updating progress for module ${moduleId}: ${progress}%`);
+      
+      // Simulate successful progress update
+      return true;
+    } catch (error) {
+      console.error('Error updating module progress:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Complete a module and earn NFT
+   */
+  public async completeEducationalModule(moduleId: string): Promise<boolean> {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // In a real implementation, this would call the NFT Education contract
+      console.log(`Completing module: ${moduleId}`);
+      
+      // Simulate successful module completion
+      return true;
+    } catch (error) {
+      console.error('Error completing educational module:', error);
+      return false;
+    }
+  }
+
+  // ========== Research Marketplace Methods ==========
+
+  /**
+   * Get active research projects
+   */
+  public async getActiveResearchProjects(): Promise<any[]> {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // For demo purposes, we'll return mock projects
+      return [
+        {
+          id: 'project1',
+          name: 'Cycle Pattern Analysis Study',
+          description: 'Research on identifying patterns in menstrual cycles that could indicate underlying health conditions.',
+          researcher: 'GBUKOFF6FX6767LKKOD3P7KAS43I3Z7CNUBPCH33YZKPPR53ZDHAHCER',
+          institution: 'Women\'s Health Research Institute',
+          data_categories: ['cycle_length', 'symptoms', 'flow_intensity'],
+          min_reputation: 40,
+          payment_per_contribution: 50000000, // 5 XLM in stroops
+          total_budget: 10000000000, // 1000 XLM in stroops
+          remaining_budget: 9000000000, // 900 XLM in stroops
+          contribution_count: 20,
+          status: 'Active',
+          created_at: Date.now() - 60 * 24 * 60 * 60 * 1000,
+          expires_at: Date.now() + 120 * 24 * 60 * 60 * 1000,
+          ethically_approved: true,
+          approval_reference: 'WHRI-2023-045'
+        },
+        {
+          id: 'project2',
+          name: 'Nutrition Impact on Menstrual Health',
+          description: 'Study on how dietary choices affect menstrual symptoms and overall cycle health.',
+          researcher: 'GBUKOFF6FX6767LKKOD3P7KAS43I3Z7CNUBPCH33YZKPPR53ZDHAHCER',
+          institution: 'Global Nutrition Institute',
+          data_categories: ['diet', 'symptoms', 'cycle_length'],
+          min_reputation: 50,
+          payment_per_contribution: 70000000, // 7 XLM in stroops
+          total_budget: 7000000000, // 700 XLM in stroops
+          remaining_budget: 6300000000, // 630 XLM in stroops
+          contribution_count: 10,
+          status: 'Active',
+          created_at: Date.now() - 45 * 24 * 60 * 60 * 1000,
+          expires_at: Date.now() + 90 * 24 * 60 * 60 * 1000,
+          ethically_approved: true,
+          approval_reference: 'GNI-2023-078'
+        },
+        {
+          id: 'project3',
+          name: 'Exercise and Menstrual Health Correlation',
+          description: 'Investigation into how different types and intensities of exercise affect the menstrual cycle.',
+          researcher: 'GBUKOFF6FX6767LKKOD3P7KAS43I3Z7CNUBPCH33YZKPPR53ZDHAHCER',
+          institution: 'Sports Medicine Academy',
+          data_categories: ['exercise', 'symptoms', 'cycle_length', 'mood'],
+          min_reputation: 30,
+          payment_per_contribution: 60000000, // 6 XLM in stroops
+          total_budget: 6000000000, // 600 XLM in stroops
+          remaining_budget: 5700000000, // 570 XLM in stroops
+          contribution_count: 5,
+          status: 'Active',
+          created_at: Date.now() - 30 * 24 * 60 * 60 * 1000,
+          expires_at: Date.now() + 150 * 24 * 60 * 60 * 1000,
+          ethically_approved: true,
+          approval_reference: 'SMA-2023-034'
+        }
+      ];
+    } catch (error) {
+      console.error('Error getting active research projects:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get user's research contributions
+   */
+  public async getUserResearchContributions(): Promise<any[]> {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // For demo purposes, we'll return mock contributions
+      return [
+        {
+          id: 'contribution1',
+          project_id: 'project1',
+          contributor: 'GBUKOFF6FX6767LKKOD3P7KAS43I3Z7CNUBPCH33YZKPPR53ZDHAHCER',
+          data_hash: 'hash_123456789',
+          categories: ['cycle_length', 'symptoms'],
+          quality_score: 85,
+          payment_amount: 50000000, // 5 XLM in stroops
+          payment_claimed: true,
+          payment_tx_id: 'TX12345_67890',
+          created_at: Date.now() - 50 * 24 * 60 * 60 * 1000,
+          approved: true
+        },
+        {
+          id: 'contribution2',
+          project_id: 'project2',
+          contributor: 'GBUKOFF6FX6767LKKOD3P7KAS43I3Z7CNUBPCH33YZKPPR53ZDHAHCER',
+          data_hash: 'hash_987654321',
+          categories: ['diet', 'symptoms'],
+          quality_score: 78,
+          payment_amount: 70000000, // 7 XLM in stroops
+          payment_claimed: false,
+          payment_tx_id: null,
+          created_at: Date.now() - 20 * 24 * 60 * 60 * 1000,
+          approved: true
+        },
+        {
+          id: 'contribution3',
+          project_id: 'project3',
+          contributor: 'GBUKOFF6FX6767LKKOD3P7KAS43I3Z7CNUBPCH33YZKPPR53ZDHAHCER',
+          data_hash: 'hash_567891234',
+          categories: ['exercise', 'symptoms', 'mood'],
+          quality_score: 65,
+          payment_amount: 60000000, // 6 XLM in stroops
+          payment_claimed: false,
+          payment_tx_id: null,
+          created_at: Date.now() - 5 * 24 * 60 * 60 * 1000,
+          approved: false
+        }
+      ];
+    } catch (error) {
+      console.error('Error getting user research contributions:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get user's research profile
+   */
+  public async getUserResearchProfile(): Promise<any> {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // For demo purposes, we'll return a mock profile
+      return {
+        address: 'GBUKOFF6FX6767LKKOD3P7KAS43I3Z7CNUBPCH33YZKPPR53ZDHAHCER',
+        reputation_score: 72,
+        total_contributions: 3,
+        total_earned: 50000000, // 5 XLM in stroops (claimed)
+        last_contribution: Date.now() - 5 * 24 * 60 * 60 * 1000,
+        top_categories: ['symptoms', 'cycle_length', 'diet'],
+        created_at: Date.now() - 90 * 24 * 60 * 60 * 1000
+      };
+    } catch (error) {
+      console.error('Error getting user research profile:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Contribute data to a research project
+   */
+  public async contributeResearchData(
+    projectId: string,
+    dataHash: string,
+    categories: string[]
+  ): Promise<boolean> {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // In a real implementation, this would call the Research Marketplace contract
+      console.log(`Contributing data to project ${projectId} with categories: ${categories.join(', ')}`);
+      
+      // Simulate successful data contribution
+      return true;
+    } catch (error) {
+      console.error('Error contributing research data:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Claim payment for a contribution
+   */
+  public async claimResearchPayment(contributionId: string): Promise<boolean> {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // In a real implementation, this would call the Research Marketplace contract
+      console.log(`Claiming payment for contribution: ${contributionId}`);
+      
+      // Simulate successful payment claim
+      return true;
+    } catch (error) {
+      console.error('Error claiming research payment:', error);
+      return false;
+    }
+  }
 }
 
 // Create and export a singleton instance

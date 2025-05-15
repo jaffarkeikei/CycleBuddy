@@ -8,7 +8,7 @@
 [![Built on Stellar](https://img.shields.io/badge/Built%20on-Stellar-brightgreen)](https://stellar.org)
 [![Hackathon Project](https://img.shields.io/badge/EasyA-Consensus%20Hackathon-blue)](https://easya.io)
 
-> "Know your body, own your cycle" - A Web3-powered menstrual health companion that puts privacy and education first.
+> "Know your body, Own your cycle" - A Web3-powered menstrual health companion that puts privacy and education first.
 
 ## Vision
 
@@ -16,20 +16,28 @@ CycleBuddy revolutionizes menstrual health tracking by combining the privacy and
 
 ```mermaid
 graph TD
-    A[User] --> B[Secure Authentication]
-    B --> C[Private Data Storage]
-    C --> D[Personalized Tracking]
-    D --> E[Educational Content]
-    E --> F[Community Support]
-    F --> G[Anonymous Sharing]
+    User((You)) --> A[Track Your Cycle]
+    User --> B[Learn About Health]
+    User --> C[Contribute to Research]
     
-    style A fill:#ff9999
-    style B fill:#99ff99
-    style C fill:#9999ff
-    style D fill:#ffff99
-    style E fill:#ff99ff
-    style F fill:#99ffff
-    style G fill:#ffcc99
+    A --> D[AI-Powered Insights]
+    B --> E[Earn NFT Credentials]
+    C --> F[Receive Compensation]
+    
+    D --> G[Private & Secure]
+    E --> H[Knowledge Benefits]
+    F --> I[Data Ownership]
+    
+    style User fill:#ff9999,stroke:#333,stroke-width:4px
+    style A fill:#99ff99,stroke:#333,stroke-width:2px
+    style B fill:#9999ff,stroke:#333,stroke-width:2px
+    style C fill:#ffff99,stroke:#333,stroke-width:2px
+    style D fill:#ff99ff,stroke:#333,stroke-width:2px
+    style E fill:#99ffff,stroke:#333,stroke-width:2px
+    style F fill:#ffcc99,stroke:#333,stroke-width:2px
+    style G fill:#ccff99,stroke:#333,stroke-width:2px
+    style H fill:#99ccff,stroke:#333,stroke-width:2px
+    style I fill:#ffcc99,stroke:#333,stroke-width:2px
 ```
 
 ## Key Features
@@ -41,78 +49,102 @@ graph TD
 - **Anonymous Community**: Safe space for sharing and support
 - **Web3 Integration**: Utilizing blockchain for data sovereignty
 
-## Advanced Stellar Features
+## Breakthrough Features
 
-- **Path Payments for Donations**: Enable users to donate to health initiatives using Stellar's path payment feature, allowing donations in any currency that gets automatically converted.
-- **Time-bound Multi-signature Data Sharing**: Share health data with medical professionals using time-limited multi-signature authorization that automatically expires.
-- **Claimable Balances for Rewards**: Implement a reward system using Stellar's claimable balances, providing incentives for consistent tracking and educational achievements.
-- **Zero-knowledge Proofs for Private Data Validation**: Validate health metrics without revealing sensitive data through zero-knowledge proofs on the Stellar network.
-- **Data Monetization with Revenue Sharing**: Allow users to anonymously monetize their aggregated health data with pharmaceutical research, with transparent revenue sharing.
-- **Turret-based Automated Health Alerts**: Deploy Stellar Turrets to monitor health data and trigger automated alerts for concerning patterns without compromising privacy.
+CycleBuddy's three breakthrough features that set it apart from any other health application:
 
-## Advanced Features Implementation
+### 1. AI-Powered Health Insights with Stellar Turrets
 
-CycleBuddy now includes cutting-edge blockchain features that leverage Stellar's advanced capabilities:
+```mermaid
+flowchart LR
+    subgraph "How It Works"
+        direction TB
+        Data([Your Health Data]) --> Encrypt([Encrypted Locally])
+        Encrypt --> Process([Secure Processing])
+        Process --> Insights([Personalized Insights])
+        Insights --> You([Better Health Decisions])
+    end
+    
+    style Data fill:#ffcccc,stroke:#333,stroke-width:2px
+    style Encrypt fill:#ccffcc,stroke:#333,stroke-width:2px
+    style Process fill:#ccccff,stroke:#333,stroke-width:2px
+    style Insights fill:#ffffcc,stroke:#333,stroke-width:2px
+    style You fill:#ffccff,stroke:#333,stroke-width:2px
+```
 
-### 1. Donation System with Path Payments
+- **Advanced Pattern Detection**: Identifies connections in your health data that are difficult to spot manually
+- **Personalized Health Intelligence**: Tailored insights based on your unique patterns
+- **Early Warning System**: Notices potential health concerns before they become serious
+- **Privacy-Preserving Analysis**: All analysis happens on encrypted data - your private information stays private
 
-The donation system allows users to support menstrual health research initiatives in any currency they prefer. Using Stellar's path payment operations, donations are automatically converted to the recipient's preferred currency, enabling global contributions without currency barriers.
+### 2. NFT-Based Educational Achievement System
 
-**Implementation:**
-- Smart contract with path payment optimization
-- Initiative registry with automatic currency conversion
-- Transparent tracking of funds and impact
+```mermaid
+flowchart LR
+    subgraph "Knowledge Journey"
+        direction TB
+        Learn([Learn Health Topics]) --> Complete([Complete Modules])
+        Complete --> Earn([Earn NFT Credentials])
+        Earn --> Unlock([Unlock Benefits])
+    end
+    
+    style Learn fill:#ffcccc,stroke:#333,stroke-width:2px
+    style Complete fill:#ccffcc,stroke:#333,stroke-width:2px
+    style Earn fill:#ccccff,stroke:#333,stroke-width:2px
+    style Unlock fill:#ffffcc,stroke:#333,stroke-width:2px
+```
 
-### 2. Time-bound Data Sharing
+- **Learn-to-Earn Health Curriculum**: Complete educational modules to earn unique NFT credentials
+- **Verifiable Health Knowledge**: Your NFTs prove your health knowledge achievements
+- **Partner Benefits**: Access special services from healthcare providers based on your credentials
+- **Community Engagement**: Become a mentor to help others as you build your knowledge
 
-Medical data sharing is secured through Stellar's multi-signature capabilities, allowing users to grant healthcare providers access to specific data for a limited time period. When the time expires, access is automatically revoked.
+### 3. Decentralized Research Contribution Marketplace
 
-**Implementation:**
-- Multi-signature transactions with time bounds
-- Granular access controls for specific data types
-- Automatic expiration without requiring user action
+```mermaid
+flowchart LR
+    subgraph "Research Contribution"
+        direction TB
+        Choose([Choose Research]) --> Share([Share Anonymous Data])
+        Share --> Earn([Earn Compensation])
+        Earn --> Impact([See Research Impact])
+    end
+    
+    style Choose fill:#ffcccc,stroke:#333,stroke-width:2px
+    style Share fill:#ccffcc,stroke:#333,stroke-width:2px
+    style Earn fill:#ccccff,stroke:#333,stroke-width:2px
+    style Impact fill:#ffffcc,stroke:#333,stroke-width:2px
+```
 
-### 3. Achievement Rewards with Claimable Balances
+- **User-Controlled Data Sharing**: You decide exactly what anonymous data to contribute
+- **Smart Contract Compensation**: Automatic payment when your data meets quality criteria
+- **Reputation System**: Earn higher compensation as you build a reliable contribution history
+- **Direct Research Impact**: Track how your data helps important health research
 
-The app rewards consistent tracking and educational achievements through Stellar's claimable balances. Users earn tokens for completing tasks, which are securely held in the blockchain until claimed.
+## How Features Work Together
 
-**Implementation:**
-- Achievements system with milestone tracking
-- Reward distribution through claimable balances
-- Visual progress indicators and streak tracking
-
-### 4. Zero-knowledge Health Validations
-
-Users can validate health metrics for research or medical purposes without revealing the actual data. For example, proving cycle regularity without exposing cycle dates or confirming age-appropriate information without revealing birth date.
-
-**Implementation:**
-- Zero-knowledge proof generation for health metrics
-- Validation certificates stored on-chain
-- Privacy-preserving health metric verification
-
-### 5. Data Marketplace with Revenue Sharing
-
-Users can contribute anonymized data to research pools and receive compensation through transparent revenue sharing. Researchers purchase access to aggregated data pools while users maintain privacy and control.
-
-**Implementation:**
-- Anonymized data contribution mechanisms
-- Transparent revenue distribution through smart contracts
-- Research data pool management system
-
-### 6. Health Alerts via Stellar Turrets
-
-Automated health monitoring using Stellar Turrets allows for analysis of health patterns without compromising data privacy. The system can detect irregular cycles, concerning symptom patterns, or potential health issues.
-
-**Implementation:**
-- Stellar Turret integration for automated monitoring
-- Configurable alert thresholds and notification preferences
-- Privacy-preserving pattern recognition algorithms
+```mermaid
+graph TD
+    You((You)) --> Track[Track Your Cycle]
+    Track --> Insights[Get AI Insights]
+    Insights --> Learn[Learn More]
+    Learn --> Contribute[Contribute to Research]
+    Contribute --> Better[Improve AI Models]
+    Better --> Insights
+    
+    style You fill:#f9a,stroke:#333,stroke-width:4px
+    style Track fill:#adf,stroke:#333,stroke-width:2px
+    style Insights fill:#fda,stroke:#333,stroke-width:2px
+    style Learn fill:#afd,stroke:#333,stroke-width:2px
+    style Contribute fill:#dad,stroke:#333,stroke-width:2px
+    style Better fill:#dfa,stroke:#333,stroke-width:2px
+```
 
 ## 🛠 Technical Stack
 
 - **Blockchain**: Stellar Network
 - **Authentication**: Stellar Passkeys Kit
-- **Frontend**: React.js with Stellar Design System
+- **Frontend**: React.js with Chakra UI
 - **Smart Contracts**: Rust-based Stellar Smart Contracts
 - **Data Storage**: Decentralized IPFS/Stellar combination
 
@@ -120,7 +152,8 @@ Automated health monitoring using Stellar Turrets allows for analysis of health 
 
 Detailed documentation can be found in the `/docs` directory:
 
-- [Architecture Overview](docs/architecture.md)
+- [Architecture Overview](docs/system-architecture.md)
+- [Breakthrough Features Implementation](docs/breakthrough-features-implementation.md)
 - [User Flows](docs/user-flows.md)
 - [Security Model](docs/security.md)
 - [Development Guide](docs/development.md)
@@ -130,18 +163,36 @@ Detailed documentation can be found in the `/docs` directory:
 ## Problem & Solution
 
 ### The Problem
-Traditional period tracking apps often:
-- Lack privacy and data security
-- Present overwhelming or inappropriate content
-- Miss the mark on educational support
-- Create anxiety through complex medical forms
+
+```mermaid
+flowchart TD
+    Problem([Traditional Period Trackers]) --> A[Lack Privacy]
+    Problem --> B[Overwhelming Interface]
+    Problem --> C[Poor Education]
+    Problem --> D[Complex Medical Forms]
+    
+    style Problem fill:#ffcccc,stroke:#333,stroke-width:3px
+    style A fill:#ffdddd,stroke:#333,stroke-width:2px
+    style B fill:#ffdddd,stroke:#333,stroke-width:2px
+    style C fill:#ffdddd,stroke:#333,stroke-width:2px
+    style D fill:#ffdddd,stroke:#333,stroke-width:2px
+```
 
 ### Our Solution
-CycleBuddy addresses these issues by:
-- Implementing Web3 privacy-first architecture
-- Providing age-appropriate, clear guidance
-- Building a supportive, anonymous community
-- Focusing on education and empowerment
+
+```mermaid
+flowchart TD
+    Solution([CycleBuddy Solution]) --> A[Web3 Privacy-First]
+    Solution --> B[Intuitive Interface]
+    Solution --> C[Educational Focus]
+    Solution --> D[Supportive Community]
+    
+    style Solution fill:#ccffcc,stroke:#333,stroke-width:3px
+    style A fill:#ddffdd,stroke:#333,stroke-width:2px
+    style B fill:#ddffdd,stroke:#333,stroke-width:2px
+    style C fill:#ddffdd,stroke:#333,stroke-width:2px
+    style D fill:#ddffdd,stroke:#333,stroke-width:2px
+```
 
 ## 🌱 Getting Started
 
@@ -201,53 +252,25 @@ npm run dev
 
 The app will be available at: [http://localhost:3000](http://localhost:3000)
 
-## Contract Structure
+## User Experience
 
-The application uses the following Soroban (Stellar) smart contracts:
-
-1. **Registry Contract**: Central contract registry that tracks the addresses of all other contracts
-2. **Auth Contract**: Handles passkey-based authentication and user identity
-3. **Data Contract**: Stores encrypted health data with privacy controls
-4. **Community Contract**: Manages social and educational features
-5. **Donation Contract**: Enables path payments for donations to health initiatives
-6. **Data Sharing Contract**: Manages time-bound multi-signature data sharing
-7. **Rewards Contract**: Implements claimable balances for achievement rewards
-8. **ZK Validation Contract**: Facilitates zero-knowledge proofs for private data validation
-9. **Data Marketplace Contract**: Enables data monetization with revenue sharing
-10. **Health Alerts Contract**: Manages turret-based automated health alerts
-
-## Using the Testnet Integration
-
-The application can work in two modes:
-
-1. **Simulated Mode**: When Freighter wallet is not available, the app uses simulated blockchain data
-2. **Testnet Mode**: When Freighter wallet is connected, the app interacts with real contracts on the Stellar testnet
-
-To use the testnet integration:
-
-1. Install [Freighter Wallet](https://www.freighter.app/)
-2. Create and fund a testnet account
-3. Deploy contracts using the provided script
-4. Update your `.env` file with the deployed contract IDs
-5. Restart the application
-
-## Troubleshooting
-
-### Contract ID Issues
-
-If you see errors related to invalid contract IDs:
-
-1. Make sure you've deployed the contracts to testnet
-2. Check that your `.env` file contains the correct contract IDs
-3. Restart the application
-
-### Freighter Connection Issues
-
-If you're having issues connecting to Freighter:
-
-1. Make sure Freighter is installed and unlocked
-2. Switch to the Stellar testnet in Freighter
-3. Refresh the application
+```mermaid
+journey
+    title User Journey with CycleBuddy
+    section First Time
+        Install App: 3: User
+        Create Account: 4: User
+        Setup Profile: 3: User
+        Learn Interface: 4: User
+    section Daily Use
+        Track Cycle: 5: User
+        View Insights: 5: User
+        Complete Education: 4: User
+    section Advanced Use
+        Earn NFT Credentials: 5: User
+        Contribute to Research: 4: User
+        View Impact: 5: User
+```
 
 ## License
 

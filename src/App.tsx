@@ -16,6 +16,9 @@ import DeployAndInitialize from './pages/DeployAndInitialize';
 import DonationPage from './pages/features/DonationPage';
 import RewardsPage from './pages/features/RewardsPage';
 import DataSharingPage from './pages/features/DataSharingPage';
+import AIHealthInsightsPage from './pages/features/AIHealthInsightsPage';
+import NFTEducationPage from './pages/features/NFTEducationPage';
+import ResearchMarketplacePage from './pages/features/ResearchMarketplacePage';
 
 // Components
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -107,6 +110,23 @@ function App() {
             <Route path="/features/alerts" element={
               <ProtectedRoute>
                 <HealthAlertsPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Breakthrough Features Routes */}
+            <Route path="/features/ai-health-insights" element={
+              <ProtectedRoute>
+                <AIHealthInsightsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/features/nft-education" element={
+              <ProtectedRoute>
+                <NFTEducationPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/features/research-marketplace" element={
+              <ProtectedRoute>
+                <ResearchMarketplacePage />
               </ProtectedRoute>
             } />
             
