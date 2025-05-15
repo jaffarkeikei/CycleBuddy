@@ -54,7 +54,6 @@ impl DonationContract {
     
     // Create a new health initiative
     pub fn create_initiative(
-        &mut self,
         env: Env,
         admin: Address,
         name: String,
@@ -64,8 +63,10 @@ impl DonationContract {
     ) -> u32 {
         admin.require_auth();
         
-        let id = self.next_initiative_id;
-        self.next_initiative_id += 1;
+        let contract = Self::load_contract(&env);
+        let id = contract.next_initiative_id;
+        let mut contract = contract;
+        contract.next_initiative_id += 1;
         
         let initiative = Initiative {
             name,
@@ -75,15 +76,17 @@ impl DonationContract {
             raised_amount: 0,
         };
         
-        self.initiatives.set(id, initiative);
-        self.total_donated.set(id, 0);
+        contract.initiatives.set(id, initiative);
+        contract.total_donated.set(id, 0);
+        
+        let env = env.clone();
+        Self::save_contract(&env, &contract);
         
         id
     }
     
     // Donate to an initiative (in production this would call a path payment operation)
     pub fn donate_with_path_payment(
-        &mut self,
         env: Env,
         donor: Address,
         initiative_id: u32,
@@ -92,8 +95,10 @@ impl DonationContract {
     ) -> Result<(), String> {
         donor.require_auth();
         
+        let contract = Self::load_contract(&env);
+        
         // Check if initiative exists
-        let initiative = self.initiatives.get(initiative_id)
+        let initiative = contract.initiatives.get(initiative_id)
             .ok_or(String::from_str(&env, "Initiative not found"))?;
         
         // In a real implementation, this would:
@@ -116,38 +121,45 @@ impl DonationContract {
         };
         
         // Update user's donation history
-        let mut user_donations = self.donations.get(donor.clone()).unwrap_or(Vec::new(&env));
+        let mut contract = contract;
+        let mut user_donations = contract.donations.get(donor.clone()).unwrap_or(Vec::new(&env));
         user_donations.push_back(donation);
-        self.donations.set(donor, user_donations);
+        contract.donations.set(donor, user_donations);
         
         // Update initiative's total raised amount
-        let current_total = self.total_donated.get(initiative_id).unwrap_or(0);
-        self.total_donated.set(initiative_id, current_total + converted_amount);
+        let current_total = contract.total_donated.get(initiative_id).unwrap_or(0);
+        contract.total_donated.set(initiative_id, current_total + converted_amount);
         
         // Update initiative raised amount
         let mut updated_initiative = initiative;
         updated_initiative.raised_amount += converted_amount;
-        self.initiatives.set(initiative_id, updated_initiative);
+        contract.initiatives.set(initiative_id, updated_initiative);
+        
+        let env = env.clone();
+        Self::save_contract(&env, &contract);
         
         // In production, we would return the transaction hash for the path payment
         Ok(())
     }
     
     // Get donation history for a user
-    pub fn get_donation_history(&self, env: Env, user: Address) -> Vec<Donation> {
-        self.donations.get(user).unwrap_or(Vec::new(&env))
+    pub fn get_donation_history(env: Env, user: Address) -> Vec<Donation> {
+        let contract = Self::load_contract(&env);
+        contract.donations.get(user).unwrap_or(Vec::new(&env))
     }
     
     // Get initiative details
-    pub fn get_initiative(&self, env: Env, initiative_id: u32) -> Option<Initiative> {
-        self.initiatives.get(initiative_id)
+    pub fn get_initiative(env: Env, initiative_id: u32) -> Option<Initiative> {
+        let contract = Self::load_contract(&env);
+        contract.initiatives.get(initiative_id)
     }
     
     // Get all initiatives
-    pub fn list_initiatives(&self, env: Env) -> Vec<(u32, Initiative)> {
+    pub fn list_initiatives(env: Env) -> Vec<(u32, Initiative)> {
+        let contract = Self::load_contract(&env);
         let mut result = Vec::new(&env);
         
-        for (id, initiative) in self.initiatives.iter() {
+        for (id, initiative) in contract.initiatives.iter() {
             result.push_back((id, initiative));
         }
         
@@ -155,8 +167,27 @@ impl DonationContract {
     }
     
     // Get total donated to an initiative
-    pub fn get_total_donated(&self, env: Env, initiative_id: u32) -> i128 {
-        self.total_donated.get(initiative_id).unwrap_or(0)
+    pub fn get_total_donated(env: Env, initiative_id: u32) -> i128 {
+        let contract = Self::load_contract(&env);
+        contract.total_donated.get(initiative_id).unwrap_or(0)
+    }
+    
+    // Helper function to load contract state
+    fn load_contract(env: &Env) -> DonationContract {
+        let mut contract = DonationContract {
+            initiatives: Map::new(env),
+            donations: Map::new(env),
+            total_donated: Map::new(env),
+            next_initiative_id: 1,
+        };
+        
+        // In a full implementation, we'd load from storage
+        contract
+    }
+    
+    // Helper function to save contract state
+    fn save_contract(env: &Env, contract: &DonationContract) {
+        // In a full implementation, we'd save to storage
     }
 }
 
@@ -181,7 +212,7 @@ mod test {
             issuer: Some(Address::generate(&env)),
         };
         
-        let initiative_id = contract.create_initiative(
+        let initiative_id = DonationContract::create_initiative(
             env.clone(),
             admin,
             String::from_str(&env, "Women's Health Research"),
@@ -198,7 +229,7 @@ mod test {
         
         let amount = 100;
         
-        contract.donate_with_path_payment(
+        DonationContract::donate_with_path_payment(
             env.clone(),
             donor.clone(),
             initiative_id,
@@ -207,15 +238,15 @@ mod test {
         ).unwrap();
         
         // Check donation history
-        let history = contract.get_donation_history(env.clone(), donor);
+        let history = DonationContract::get_donation_history(env.clone(), donor);
         assert_eq!(history.len(), 1);
         
         // Check initiative raised amount
-        let initiative = contract.get_initiative(env.clone(), initiative_id).unwrap();
+        let initiative = DonationContract::get_initiative(env.clone(), initiative_id).unwrap();
         assert_eq!(initiative.raised_amount, amount);
         
         // Check total donated
-        let total = contract.get_total_donated(env.clone(), initiative_id);
+        let total = DonationContract::get_total_donated(env.clone(), initiative_id);
         assert_eq!(total, amount);
     }
 } 

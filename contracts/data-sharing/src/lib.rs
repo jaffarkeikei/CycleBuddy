@@ -72,7 +72,6 @@ impl DataSharingContract {
     
     // Create a time-bound share with multi-signature requirement
     pub fn create_time_bound_share(
-        &mut self,
         env: Env,
         owner: Address,
         recipient: Address,
@@ -105,7 +104,7 @@ impl DataSharingContract {
         
         // Create a unique share ID (hash of config data + timestamp)
         let share_id_preimage = env.crypto().sha256(
-            &env.serializer().serialize(&config).unwrap()
+            &String::from_str(&env, &format!("{:?}_{:?}_{}", owner, recipient, env.ledger().timestamp()))
         );
         
         // Create the share access object
@@ -115,36 +114,41 @@ impl DataSharingContract {
             is_active: true,
         };
         
+        let contract = Self::load_contract(&env);
+        let mut contract = contract;
+        
         // Store the share
-        self.shares.set(share_id_preimage.clone(), share_access);
+        contract.shares.set(share_id_preimage.clone(), share_access);
         
         // Update owner's outgoing shares
-        let mut owner_shares = self.user_shares_outgoing.get(owner.clone()).unwrap_or(Vec::new(&env));
+        let mut owner_shares = contract.user_shares_outgoing.get(owner.clone()).unwrap_or(Vec::new(&env));
         owner_shares.push_back(share_id_preimage.clone());
-        self.user_shares_outgoing.set(owner, owner_shares);
+        contract.user_shares_outgoing.set(owner, owner_shares);
         
         // Update recipient's incoming shares
-        let mut recipient_shares = self.user_shares_incoming.get(recipient.clone()).unwrap_or(Vec::new(&env));
+        let mut recipient_shares = contract.user_shares_incoming.get(recipient.clone()).unwrap_or(Vec::new(&env));
         recipient_shares.push_back(share_id_preimage.clone());
-        self.user_shares_incoming.set(recipient, recipient_shares);
+        contract.user_shares_incoming.set(recipient, recipient_shares);
         
         // In production, this would also create a real Stellar multi-signature 
         // transaction with time bounds that authorizes the data access
+        Self::save_contract(&env, &contract);
         
         share_id_preimage
     }
     
     // Access shared data (requires authentication from recipient)
     pub fn access_shared_data(
-        &mut self,
         env: Env,
         share_id: BytesN<32>,
         requester: Address,
     ) -> Result<Vec<BytesN<32>>, String> {
         requester.require_auth();
         
+        let contract = Self::load_contract(&env);
+        
         // Get the share
-        let share = self.shares.get(share_id.clone())
+        let share = contract.shares.get(share_id.clone())
             .ok_or(String::from_str(&env, "Share not found"))?;
         
         // Verify the share is active
@@ -168,7 +172,10 @@ impl DataSharingContract {
             // Deactivate expired shares
             let mut updated_share = share.clone();
             updated_share.is_active = false;
-            self.shares.set(share_id.clone(), updated_share);
+            
+            let mut contract = contract;
+            contract.shares.set(share_id.clone(), updated_share);
+            Self::save_contract(&env, &contract);
             
             return Err(String::from_str(&env, "Share has expired"));
         }
@@ -182,7 +189,9 @@ impl DataSharingContract {
             success: true,
         };
         
-        self.access_logs.push_back(log);
+        let mut contract = contract;
+        contract.access_logs.push_back(log);
+        Self::save_contract(&env, &contract);
         
         // Return the data IDs that can be accessed
         // In a real implementation, this would also verify the multi-signature transaction
@@ -191,15 +200,16 @@ impl DataSharingContract {
     
     // Revoke a share (only owner can revoke)
     pub fn revoke_share(
-        &mut self,
         env: Env,
         owner: Address,
         share_id: BytesN<32>,
     ) -> Result<(), String> {
         owner.require_auth();
         
+        let contract = Self::load_contract(&env);
+        
         // Get the share
-        let share = self.shares.get(share_id.clone())
+        let share = contract.shares.get(share_id.clone())
             .ok_or(String::from_str(&env, "Share not found"))?;
         
         // Verify the caller is the owner
@@ -210,7 +220,10 @@ impl DataSharingContract {
         // Deactivate the share
         let mut updated_share = share;
         updated_share.is_active = false;
-        self.shares.set(share_id, updated_share);
+        
+        let mut contract = contract;
+        contract.shares.set(share_id, updated_share);
+        Self::save_contract(&env, &contract);
         
         // In production, this would also cancel the multi-signature transaction
         
@@ -219,15 +232,15 @@ impl DataSharingContract {
     
     // Get shares created by a user
     pub fn get_outgoing_shares(
-        &self,
         env: Env,
         owner: Address,
     ) -> Vec<ShareAccess> {
+        let contract = Self::load_contract(&env);
         let mut result = Vec::new(&env);
         
-        if let Some(share_ids) = self.user_shares_outgoing.get(owner) {
+        if let Some(share_ids) = contract.user_shares_outgoing.get(owner) {
             for share_id in share_ids.iter() {
-                if let Some(share) = self.shares.get(share_id) {
+                if let Some(share) = contract.shares.get(share_id) {
                     result.push_back(share);
                 }
             }
@@ -238,15 +251,15 @@ impl DataSharingContract {
     
     // Get shares available to a user
     pub fn get_incoming_shares(
-        &self,
         env: Env,
         recipient: Address,
     ) -> Vec<ShareAccess> {
+        let contract = Self::load_contract(&env);
         let mut result = Vec::new(&env);
         
-        if let Some(share_ids) = self.user_shares_incoming.get(recipient) {
+        if let Some(share_ids) = contract.user_shares_incoming.get(recipient) {
             for share_id in share_ids.iter() {
-                if let Some(share) = self.shares.get(share_id) {
+                if let Some(share) = contract.shares.get(share_id) {
                     // Only return active shares
                     if share.is_active {
                         result.push_back(share);
@@ -260,41 +273,60 @@ impl DataSharingContract {
     
     // Get share details
     pub fn get_share(
-        &self,
         env: Env,
         share_id: BytesN<32>,
     ) -> Option<ShareAccess> {
-        self.shares.get(share_id)
+        let contract = Self::load_contract(&env);
+        contract.shares.get(share_id)
     }
     
     // Get access logs for a share (admin or owner can view)
     pub fn get_access_logs(
-        &self,
         env: Env,
         caller: Address,
         share_id: BytesN<32>,
     ) -> Result<Vec<AccessLog>, String> {
         caller.require_auth();
         
+        let contract = Self::load_contract(&env);
+        
         // Get the share
-        let share = self.shares.get(share_id.clone())
+        let share = contract.shares.get(share_id.clone())
             .ok_or(String::from_str(&env, "Share not found"))?;
         
         // Verify caller is admin or owner
-        if caller != self.admin && caller != share.config.owner {
+        if caller != contract.admin && caller != share.config.owner {
             return Err(String::from_str(&env, "Unauthorized"));
         }
         
         // Filter logs for this share
         let mut result = Vec::new(&env);
         
-        for log in self.access_logs.iter() {
+        for log in contract.access_logs.iter() {
             if log.share_id == share_id {
                 result.push_back(log);
             }
         }
         
         Ok(result)
+    }
+    
+    // Helper function to load contract state
+    fn load_contract(env: &Env) -> DataSharingContract {
+        // In a full implementation, we'd load from storage
+        // For prototype, return empty contract
+        DataSharingContract {
+            admin: Address::from_string(env, "GBUKOFF6FX6767LKKOD3P7KAS43I3Z7CNUBPCH33YZKPPR53ZDHAHCER"),
+            shares: Map::new(env),
+            user_shares_outgoing: Map::new(env),
+            user_shares_incoming: Map::new(env),
+            access_logs: Vec::new(env),
+        }
+    }
+    
+    // Helper function to save contract state
+    fn save_contract(env: &Env, contract: &DataSharingContract) {
+        // In a full implementation, we'd save to storage
     }
 }
 
@@ -311,7 +343,7 @@ mod test {
         let recipient = Address::generate(&env);
         
         // Initialize contract
-        let mut contract = DataSharingContract::initialize(env.clone(), admin);
+        let contract = DataSharingContract::initialize(env.clone(), admin);
         
         // Create some data IDs
         let data_id1 = BytesN::from_array(&env, &[1u8; 32]);
@@ -327,7 +359,7 @@ mod test {
         let end_time = current_time + 100;
         
         // Create a share
-        let share_id = contract.create_time_bound_share(
+        let share_id = DataSharingContract::create_time_bound_share(
             env.clone(),
             owner.clone(),
             recipient.clone(),
@@ -338,15 +370,15 @@ mod test {
         );
         
         // Check owner's outgoing shares
-        let owner_shares = contract.get_outgoing_shares(env.clone(), owner.clone());
+        let owner_shares = DataSharingContract::get_outgoing_shares(env.clone(), owner.clone());
         assert_eq!(owner_shares.len(), 1);
         
         // Check recipient's incoming shares
-        let recipient_shares = contract.get_incoming_shares(env.clone(), recipient.clone());
+        let recipient_shares = DataSharingContract::get_incoming_shares(env.clone(), recipient.clone());
         assert_eq!(recipient_shares.len(), 1);
         
         // Try to access before start time (should fail)
-        let result = contract.access_shared_data(
+        let result = DataSharingContract::access_shared_data(
             env.clone(),
             share_id.clone(),
             recipient.clone(),
@@ -369,7 +401,7 @@ mod test {
         });
         
         // Now access should work
-        let result = contract.access_shared_data(
+        let result = DataSharingContract::access_shared_data(
             env.clone(),
             share_id.clone(),
             recipient.clone(),
@@ -377,14 +409,14 @@ mod test {
         assert!(result.is_ok());
         
         // Check access logs
-        let logs = contract.get_access_logs(env.clone(), owner.clone(), share_id.clone()).unwrap();
+        let logs = DataSharingContract::get_access_logs(env.clone(), owner.clone(), share_id.clone()).unwrap();
         assert_eq!(logs.len(), 1);
         
         // Revoke the share
-        contract.revoke_share(env.clone(), owner, share_id.clone()).unwrap();
+        DataSharingContract::revoke_share(env.clone(), owner, share_id.clone()).unwrap();
         
         // Try to access after revocation (should fail)
-        let result = contract.access_shared_data(
+        let result = DataSharingContract::access_shared_data(
             env.clone(),
             share_id,
             recipient,

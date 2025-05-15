@@ -4,7 +4,7 @@ use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, Map, Strin
 // Note: In a real implementation, we would use a proper ZK proving system
 // This is a simplified version for the prototype
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 #[contracttype]
 pub enum ValidationType {
     CycleLengthInRange,
@@ -25,7 +25,7 @@ pub struct VerificationKey {
 #[derive(Clone)]
 #[contracttype]
 pub struct ZKProof {
-    proof_data: Vec<u8>, // In a real system, this would be an actual ZK proof
+    proof_data: String, // In a real system, this would be an actual ZK proof
 }
 
 #[derive(Clone)]
@@ -64,7 +64,7 @@ impl ZKValidationContract {
         admin.require_auth();
         
         let mut contract = Self {
-            admin,
+            admin: admin.clone(),
             validators: Vec::new(&env),
             validation_records: Map::new(&env),
             user_validations: Map::new(&env),
@@ -96,11 +96,18 @@ impl ZKValidationContract {
             ValidationType::TreatmentEffectiveness,
         ].iter() {
             // Create a unique key for each validation type
-            let key_data = BytesN::from_array(env, &[
-                validation_type.clone() as u8,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            ]);
+            let mut key_data_array = [0u8; 32];
+            // Just set the first byte to a unique value based on validation type
+            key_data_array[0] = match validation_type {
+                ValidationType::CycleLengthInRange => 1,
+                ValidationType::AgeVerification => 2,
+                ValidationType::SymptomThreshold => 3,
+                ValidationType::RegularTracking => 4,
+                ValidationType::HealthMetricInRange => 5,
+                ValidationType::TreatmentEffectiveness => 6,
+            };
+            
+            let key_data = BytesN::from_array(env, &key_data_array);
             
             let verification_key = VerificationKey {
                 validation_type: validation_type.clone(),
@@ -113,33 +120,36 @@ impl ZKValidationContract {
     
     // Add a validator
     pub fn add_validator(
-        &mut self,
         env: Env,
         admin: Address,
         validator: Address,
     ) -> Result<(), String> {
         admin.require_auth();
         
-        if admin != self.admin {
+        let contract = Self::load_contract(&env);
+        
+        if admin != contract.admin {
             return Err(String::from_str(&env, "Only admin can add validators"));
         }
         
         // Check if validator already exists
-        for existing in self.validators.iter() {
+        for existing in contract.validators.iter() {
             if existing == validator {
                 return Err(String::from_str(&env, "Validator already exists"));
             }
         }
         
         // Add the validator
-        self.validators.push_back(validator);
+        let mut contract = contract;
+        contract.validators.push_back(validator);
+        
+        Self::save_contract(&env, &contract);
         
         Ok(())
     }
     
     // Set a verification key for a validation type
     pub fn set_verification_key(
-        &mut self,
         env: Env,
         admin: Address,
         validation_type: ValidationType,
@@ -147,7 +157,9 @@ impl ZKValidationContract {
     ) -> Result<(), String> {
         admin.require_auth();
         
-        if admin != self.admin {
+        let contract = Self::load_contract(&env);
+        
+        if admin != contract.admin {
             return Err(String::from_str(&env, "Only admin can set verification keys"));
         }
         
@@ -156,14 +168,16 @@ impl ZKValidationContract {
             key_data,
         };
         
-        self.verification_keys.set(validation_type, verification_key);
+        let mut contract = contract;
+        contract.verification_keys.set(validation_type, verification_key);
+        
+        Self::save_contract(&env, &contract);
         
         Ok(())
     }
     
     // Submit a zero-knowledge proof for validation
     pub fn submit_proof(
-        &mut self,
         env: Env,
         user: Address,
         proof: ZKProof,
@@ -172,22 +186,20 @@ impl ZKValidationContract {
     ) -> Result<BytesN<32>, String> {
         user.require_auth();
         
+        let contract = Self::load_contract(&env);
+        
         // Check if verification key exists for this validation type
-        let verification_key = self.verification_keys.get(validation_type.clone())
+        let verification_key = contract.verification_keys.get(validation_type.clone())
             .ok_or(String::from_str(&env, "No verification key for this validation type"))?;
         
         // Create a unique validation ID
         let validation_id = env.crypto().sha256(
-            &env.serializer().serialize(&(
-                user.clone(),
-                validation_type.clone(),
-                env.ledger().timestamp()
-            )).unwrap()
+            &String::from_str(&env, &format!("{:?}_{:?}_{}", user, validation_type, env.ledger().timestamp()))
         );
         
         // In a real implementation, this would actually verify the ZK proof
         // For the prototype, we'll simulate verification based on the public inputs
-        let status = self.simulate_verification(&env, &proof, &public_inputs, &validation_type);
+        let status = Self::simulate_verification(&env, &proof, &public_inputs, &validation_type);
         
         // Create validation record
         let record = ValidationRecord {
@@ -200,19 +212,21 @@ impl ZKValidationContract {
         };
         
         // Store the validation record
-        self.validation_records.set(validation_id.clone(), record);
+        let mut contract = contract;
+        contract.validation_records.set(validation_id.clone(), record);
         
         // Update user's validations
-        let mut user_validations = self.user_validations.get(user.clone()).unwrap_or(Vec::new(&env));
+        let mut user_validations = contract.user_validations.get(user.clone()).unwrap_or(Vec::new(&env));
         user_validations.push_back(validation_id.clone());
-        self.user_validations.set(user, user_validations);
+        contract.user_validations.set(user, user_validations);
+        
+        Self::save_contract(&env, &contract);
         
         Ok(validation_id)
     }
     
     // Simulate ZK proof verification (for prototype purposes)
     fn simulate_verification(
-        &self,
         env: &Env,
         proof: &ZKProof,
         public_inputs: &Vec<i128>,
@@ -226,14 +240,17 @@ impl ZKValidationContract {
                 // Verify cycle length is within a healthy range (e.g., 21-35 days)
                 // Public inputs: [cycle_length_lower, cycle_length_upper]
                 if public_inputs.len() >= 2 {
-                    let lower = public_inputs[0];
-                    let upper = public_inputs[1];
-                    
-                    if lower >= 21 && upper <= 35 {
-                        ValidationStatus::Valid
-                    } else {
-                        ValidationStatus::Invalid
+                    if let Some(public_inputs_slice) = public_inputs.first() {
+                        let lower = *public_inputs_slice;
+                        if let Some(public_inputs_slice) = public_inputs.get(1) {
+                            let upper = *public_inputs_slice;
+                            
+                            if lower >= 21 && upper <= 35 {
+                                return ValidationStatus::Valid;
+                            }
+                        }
                     }
+                    ValidationStatus::Invalid
                 } else {
                     ValidationStatus::Invalid
                 }
@@ -243,13 +260,14 @@ impl ZKValidationContract {
                 // Verify user is above a certain age without revealing exact age
                 // Public input: [age_threshold, is_above_threshold (0 or 1)]
                 if public_inputs.len() >= 2 {
-                    let is_above_threshold = public_inputs[1];
-                    
-                    if is_above_threshold == 1 {
-                        ValidationStatus::Valid
-                    } else {
-                        ValidationStatus::Invalid
+                    if let Some(public_inputs_slice) = public_inputs.get(1) {
+                        let is_above_threshold = *public_inputs_slice;
+                        
+                        if is_above_threshold == 1 {
+                            return ValidationStatus::Valid;
+                        }
                     }
+                    ValidationStatus::Invalid
                 } else {
                     ValidationStatus::Invalid
                 }
@@ -259,13 +277,14 @@ impl ZKValidationContract {
                 // Verify if symptom severity is above a threshold
                 // Public inputs: [threshold, is_above (0 or 1)]
                 if public_inputs.len() >= 2 {
-                    let is_above = public_inputs[1];
-                    
-                    if is_above == 1 {
-                        ValidationStatus::Valid
-                    } else {
-                        ValidationStatus::Invalid
+                    if let Some(public_inputs_slice) = public_inputs.get(1) {
+                        let is_above = *public_inputs_slice;
+                        
+                        if is_above == 1 {
+                            return ValidationStatus::Valid;
+                        }
                     }
+                    ValidationStatus::Invalid
                 } else {
                     ValidationStatus::Invalid
                 }
@@ -275,14 +294,17 @@ impl ZKValidationContract {
                 // Verify user has been tracking regularly
                 // Public inputs: [required_days, actual_days]
                 if public_inputs.len() >= 2 {
-                    let required_days = public_inputs[0];
-                    let actual_days = public_inputs[1];
-                    
-                    if actual_days >= required_days {
-                        ValidationStatus::Valid
-                    } else {
-                        ValidationStatus::Invalid
+                    if let Some(public_inputs_slice) = public_inputs.first() {
+                        let required_days = *public_inputs_slice;
+                        if let Some(public_inputs_slice) = public_inputs.get(1) {
+                            let actual_days = *public_inputs_slice;
+                            
+                            if actual_days >= required_days {
+                                return ValidationStatus::Valid;
+                            }
+                        }
                     }
+                    ValidationStatus::Invalid
                 } else {
                     ValidationStatus::Invalid
                 }
@@ -292,13 +314,14 @@ impl ZKValidationContract {
                 // Verify health metric is within a normal range
                 // Public inputs: [lower_bound, upper_bound, is_in_range (0 or 1)]
                 if public_inputs.len() >= 3 {
-                    let is_in_range = public_inputs[2];
-                    
-                    if is_in_range == 1 {
-                        ValidationStatus::Valid
-                    } else {
-                        ValidationStatus::Invalid
+                    if let Some(public_inputs_slice) = public_inputs.get(2) {
+                        let is_in_range = *public_inputs_slice;
+                        
+                        if is_in_range == 1 {
+                            return ValidationStatus::Valid;
+                        }
                     }
+                    ValidationStatus::Invalid
                 } else {
                     ValidationStatus::Invalid
                 }
@@ -308,13 +331,14 @@ impl ZKValidationContract {
                 // Verify treatment effectiveness without revealing exact metrics
                 // Public inputs: [effectiveness_threshold, is_effective (0 or 1)]
                 if public_inputs.len() >= 2 {
-                    let is_effective = public_inputs[1];
-                    
-                    if is_effective == 1 {
-                        ValidationStatus::Valid
-                    } else {
-                        ValidationStatus::Invalid
+                    if let Some(public_inputs_slice) = public_inputs.get(1) {
+                        let is_effective = *public_inputs_slice;
+                        
+                        if is_effective == 1 {
+                            return ValidationStatus::Valid;
+                        }
                     }
+                    ValidationStatus::Invalid
                 } else {
                     ValidationStatus::Invalid
                 }
@@ -324,12 +348,12 @@ impl ZKValidationContract {
     
     // Get validation status
     pub fn get_validation_status(
-        &self,
         env: Env,
         validation_id: BytesN<32>,
     ) -> Result<ValidationStatus, String> {
         // Get the validation record
-        let record = self.validation_records.get(validation_id)
+        let contract = Self::load_contract(&env);
+        let record = contract.validation_records.get(validation_id)
             .ok_or(String::from_str(&env, "Validation not found"))?;
         
         Ok(record.status)
@@ -337,7 +361,6 @@ impl ZKValidationContract {
     
     // Get validation record (only accessible by user or validator)
     pub fn get_validation_record(
-        &self,
         env: Env,
         caller: Address,
         validation_id: BytesN<32>,
@@ -345,11 +368,12 @@ impl ZKValidationContract {
         caller.require_auth();
         
         // Get the validation record
-        let record = self.validation_records.get(validation_id.clone())
+        let contract = Self::load_contract(&env);
+        let record = contract.validation_records.get(validation_id.clone())
             .ok_or(String::from_str(&env, "Validation not found"))?;
         
         // Verify caller is the user or a validator
-        let is_validator = self.validators.iter().any(|v| v == caller);
+        let is_validator = contract.validators.iter().any(|v| v == caller);
         
         if record.user != caller && !is_validator {
             return Err(String::from_str(&env, "Unauthorized"));
@@ -360,17 +384,17 @@ impl ZKValidationContract {
     
     // Get all validations for a user
     pub fn get_user_validations(
-        &self,
         env: Env,
         user: Address,
     ) -> Vec<ValidationRecord> {
         user.require_auth();
         
+        let contract = Self::load_contract(&env);
         let mut result = Vec::new(&env);
         
-        if let Some(validation_ids) = self.user_validations.get(user) {
+        if let Some(validation_ids) = contract.user_validations.get(user) {
             for validation_id in validation_ids.iter() {
-                if let Some(record) = self.validation_records.get(validation_id) {
+                if let Some(record) = contract.validation_records.get(validation_id) {
                     result.push_back(record);
                 }
             }
@@ -381,18 +405,18 @@ impl ZKValidationContract {
     
     // Get validations by type for a user
     pub fn get_user_validations_by_type(
-        &self,
         env: Env,
         user: Address,
         validation_type: ValidationType,
     ) -> Vec<ValidationRecord> {
         user.require_auth();
         
+        let contract = Self::load_contract(&env);
         let mut result = Vec::new(&env);
         
-        if let Some(validation_ids) = self.user_validations.get(user) {
+        if let Some(validation_ids) = contract.user_validations.get(user) {
             for validation_id in validation_ids.iter() {
-                if let Some(record) = self.validation_records.get(validation_id) {
+                if let Some(record) = contract.validation_records.get(validation_id) {
                     if record.validation_type == validation_type {
                         result.push_back(record);
                     }
@@ -401,6 +425,24 @@ impl ZKValidationContract {
         }
         
         result
+    }
+    
+    // Helper function to load contract state
+    fn load_contract(env: &Env) -> ZKValidationContract {
+        // In a full implementation, we'd load from storage
+        // For prototype, return empty contract
+        ZKValidationContract {
+            admin: Address::from_string(env, "GBUKOFF6FX6767LKKOD3P7KAS43I3Z7CNUBPCH33YZKPPR53ZDHAHCER"),
+            validators: Vec::new(env),
+            validation_records: Map::new(env),
+            user_validations: Map::new(env),
+            verification_keys: Map::new(env),
+        }
+    }
+    
+    // Helper function to save contract state
+    fn save_contract(env: &Env, contract: &ZKValidationContract) {
+        // In a full implementation, we'd save to storage
     }
 }
 
@@ -420,7 +462,7 @@ mod test {
         
         // Create a dummy proof
         let proof = ZKProof {
-            proof_data: Vec::from_array(&env, [0u8; 32]),
+            proof_data: String::from_str(&env, "dummy_proof"),
         };
         
         // Test cycle length validation
@@ -429,7 +471,7 @@ mod test {
         public_inputs.push_back(28); // lower bound
         public_inputs.push_back(28); // upper bound
         
-        let validation_id = contract.submit_proof(
+        let validation_id = ZKValidationContract::submit_proof(
             env.clone(),
             user.clone(),
             proof.clone(),
@@ -438,7 +480,7 @@ mod test {
         ).unwrap();
         
         // Check validation status (should be valid)
-        let status = contract.get_validation_status(env.clone(), validation_id).unwrap();
+        let status = ZKValidationContract::get_validation_status(env.clone(), validation_id).unwrap();
         assert!(matches!(status, ValidationStatus::Valid));
         
         // Test age verification with invalid data
@@ -446,7 +488,7 @@ mod test {
         public_inputs.push_back(18); // age threshold
         public_inputs.push_back(0);  // is_above_threshold (0 = false)
         
-        let validation_id = contract.submit_proof(
+        let validation_id = ZKValidationContract::submit_proof(
             env.clone(),
             user.clone(),
             proof.clone(),
@@ -455,15 +497,15 @@ mod test {
         ).unwrap();
         
         // Check validation status (should be invalid)
-        let status = contract.get_validation_status(env.clone(), validation_id).unwrap();
+        let status = ZKValidationContract::get_validation_status(env.clone(), validation_id).unwrap();
         assert!(matches!(status, ValidationStatus::Invalid));
         
         // Get user's validations
-        let validations = contract.get_user_validations(env.clone(), user.clone());
+        let validations = ZKValidationContract::get_user_validations(env.clone(), user.clone());
         assert_eq!(validations.len(), 2);
         
         // Get validations by type
-        let age_validations = contract.get_user_validations_by_type(
+        let age_validations = ZKValidationContract::get_user_validations_by_type(
             env.clone(),
             user.clone(),
             ValidationType::AgeVerification,

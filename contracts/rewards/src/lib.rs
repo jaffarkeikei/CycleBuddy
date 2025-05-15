@@ -180,7 +180,6 @@ impl RewardContract {
     
     // Update user's progress toward an achievement
     pub fn update_progress(
-        &mut self,
         env: Env,
         user: Address,
         achievement_id: u32,
@@ -190,12 +189,14 @@ impl RewardContract {
         // For the prototype, we'll allow users to update their own progress
         user.require_auth();
         
+        let contract = Self::load_contract(&env);
+        
         // Check if achievement exists
-        let achievement = self.achievements.get(achievement_id)
+        let achievement = contract.achievements.get(achievement_id)
             .ok_or(String::from_str(&env, "Achievement not found"))?;
         
         // Get or create user's achievement progress map
-        let mut user_achievement_map = self.user_progress.get(user.clone())
+        let mut user_achievement_map = contract.user_progress.get(user.clone())
             .unwrap_or(Map::new(&env));
         
         // Get or create progress for this achievement
@@ -217,7 +218,7 @@ impl RewardContract {
                 progress.completed_at = Some(env.ledger().timestamp());
                 
                 // Create a claimable reward
-                let _ = self.create_claimable_reward(
+                let _ = Self::create_claimable_reward(
                     env.clone(),
                     user.clone(),
                     achievement_id,
@@ -225,8 +226,10 @@ impl RewardContract {
             }
             
             // Update progress in storage
+            let mut contract = contract;
             user_achievement_map.set(achievement_id, progress);
-            self.user_progress.set(user, user_achievement_map);
+            contract.user_progress.set(user, user_achievement_map);
+            Self::save_contract(&env, &contract);
         }
         
         Ok(())
@@ -234,18 +237,20 @@ impl RewardContract {
     
     // Create a claimable reward for a completed achievement
     fn create_claimable_reward(
-        &mut self,
         env: Env,
         user: Address,
         achievement_id: u32,
     ) -> Result<BytesN<32>, String> {
+        let contract = Self::load_contract(&env);
+        
         // Get the achievement
-        let achievement = self.achievements.get(achievement_id)
+        let achievement = contract.achievements.get(achievement_id)
             .ok_or(String::from_str(&env, "Achievement not found"))?;
         
         // Create a unique reward ID
         let reward_id_preimage = env.crypto().sha256(
-            &env.serializer().serialize(&(user.clone(), achievement_id, env.ledger().timestamp())).unwrap()
+            &String::from_str(&env, &format!("{:?}_{}_{}",
+                user, achievement_id, env.ledger().timestamp()))
         );
         
         // Create the claimable reward
@@ -264,39 +269,43 @@ impl RewardContract {
         // with the user as the claimant
         
         // Store the reward
-        self.claimable_rewards.set(reward_id_preimage.clone(), reward);
+        let mut contract = contract;
+        contract.claimable_rewards.set(reward_id_preimage.clone(), reward);
         
         // Update user's rewards list
-        let mut user_reward_ids = self.user_rewards.get(user.clone())
+        let mut user_reward_ids = contract.user_rewards.get(user.clone())
             .unwrap_or(Vec::new(&env));
         user_reward_ids.push_back(reward_id_preimage.clone());
-        self.user_rewards.set(user, user_reward_ids);
+        contract.user_rewards.set(user, user_reward_ids);
+        
+        Self::save_contract(&env, &contract);
         
         Ok(reward_id_preimage)
     }
     
     // Check and create rewards for multiple achievements
     pub fn check_and_create_rewards(
-        &mut self,
         env: Env,
         user: Address,
     ) -> Vec<ClaimableReward> {
         user.require_auth();
         
+        let contract = Self::load_contract(&env);
         let mut new_rewards = Vec::new(&env);
         
         // Get user's progress
-        if let Some(user_achievement_map) = self.user_progress.get(user.clone()) {
+        if let Some(user_achievement_map) = contract.user_progress.get(user.clone()) {
             // Check each achievement
             for (achievement_id, progress) in user_achievement_map.iter() {
-                if progress.completed && !self.has_claimed_reward(&env, &user, achievement_id) {
+                if progress.completed && !Self::has_claimed_reward(&env, &user, achievement_id) {
                     // Create a claimable reward
-                    if let Ok(reward_id) = self.create_claimable_reward(
+                    if let Ok(reward_id) = Self::create_claimable_reward(
                         env.clone(),
                         user.clone(),
                         achievement_id,
                     ) {
-                        if let Some(reward) = self.claimable_rewards.get(reward_id) {
+                        let contract = Self::load_contract(&env);
+                        if let Some(reward) = contract.claimable_rewards.get(reward_id) {
                             new_rewards.push_back(reward);
                         }
                     }
@@ -308,10 +317,12 @@ impl RewardContract {
     }
     
     // Check if user has already claimed a reward for an achievement
-    fn has_claimed_reward(&self, env: &Env, user: &Address, achievement_id: u32) -> bool {
-        if let Some(reward_ids) = self.user_rewards.get(user.clone()) {
+    fn has_claimed_reward(env: &Env, user: &Address, achievement_id: u32) -> bool {
+        let contract = Self::load_contract(env);
+        
+        if let Some(reward_ids) = contract.user_rewards.get(user.clone()) {
             for reward_id in reward_ids.iter() {
-                if let Some(reward) = self.claimable_rewards.get(reward_id) {
+                if let Some(reward) = contract.claimable_rewards.get(reward_id) {
                     if reward.achievement_id == achievement_id && reward.claimed {
                         return true;
                     }
@@ -324,15 +335,16 @@ impl RewardContract {
     
     // Claim a reward (in production, this would claim the Stellar claimable balance)
     pub fn claim_reward(
-        &mut self,
         env: Env,
         user: Address,
         reward_id: BytesN<32>,
     ) -> Result<(), String> {
         user.require_auth();
         
+        let contract = Self::load_contract(&env);
+        
         // Get the reward
-        let mut reward = self.claimable_rewards.get(reward_id.clone())
+        let mut reward = contract.claimable_rewards.get(reward_id.clone())
             .ok_or(String::from_str(&env, "Reward not found"))?;
         
         // Check if user is the reward owner
@@ -348,30 +360,33 @@ impl RewardContract {
         // In a real implementation, this would claim the Stellar claimable balance
         
         // Update reward status
+        let mut contract = contract;
         reward.claimed = true;
         reward.claimed_at = Some(env.ledger().timestamp());
-        self.claimable_rewards.set(reward_id, reward);
+        contract.claimable_rewards.set(reward_id, reward);
+        
+        Self::save_contract(&env, &contract);
         
         Ok(())
     }
     
     // Get achievement details
     pub fn get_achievement(
-        &self,
         env: Env,
         achievement_id: u32,
     ) -> Option<Achievement> {
-        self.achievements.get(achievement_id)
+        let contract = Self::load_contract(&env);
+        contract.achievements.get(achievement_id)
     }
     
     // Get all achievements
     pub fn list_achievements(
-        &self,
         env: Env,
     ) -> Vec<Achievement> {
+        let contract = Self::load_contract(&env);
         let mut result = Vec::new(&env);
         
-        for (_, achievement) in self.achievements.iter() {
+        for (_, achievement) in contract.achievements.iter() {
             result.push_back(achievement);
         }
         
@@ -380,13 +395,13 @@ impl RewardContract {
     
     // Get user's progress for all achievements
     pub fn get_user_progress(
-        &self,
         env: Env,
         user: Address,
     ) -> Vec<Progress> {
+        let contract = Self::load_contract(&env);
         let mut result = Vec::new(&env);
         
-        if let Some(user_achievement_map) = self.user_progress.get(user) {
+        if let Some(user_achievement_map) = contract.user_progress.get(user) {
             for (_, progress) in user_achievement_map.iter() {
                 result.push_back(progress);
             }
@@ -397,21 +412,41 @@ impl RewardContract {
     
     // Get user's rewards
     pub fn get_user_rewards(
-        &self,
         env: Env,
         user: Address,
     ) -> Vec<ClaimableReward> {
+        let contract = Self::load_contract(&env);
         let mut result = Vec::new(&env);
         
-        if let Some(reward_ids) = self.user_rewards.get(user) {
+        if let Some(reward_ids) = contract.user_rewards.get(user) {
             for reward_id in reward_ids.iter() {
-                if let Some(reward) = self.claimable_rewards.get(reward_id) {
+                if let Some(reward) = contract.claimable_rewards.get(reward_id) {
                     result.push_back(reward);
                 }
             }
         }
         
         result
+    }
+    
+    // Helper function to load contract state
+    fn load_contract(env: &Env) -> RewardContract {
+        // In a full implementation, we'd load from storage
+        // For prototype, return empty contract
+        RewardContract {
+            admin: Address::from_string(env, "GBUKOFF6FX6767LKKOD3P7KAS43I3Z7CNUBPCH33YZKPPR53ZDHAHCER"),
+            token_admin: Address::from_string(env, "GBUKOFF6FX6767LKKOD3P7KAS43I3Z7CNUBPCH33YZKPPR53ZDHAHCER"),
+            achievements: Map::new(env),
+            user_progress: Map::new(env),
+            claimable_rewards: Map::new(env),
+            user_rewards: Map::new(env),
+            next_achievement_id: 1,
+        }
+    }
+    
+    // Helper function to save contract state
+    fn save_contract(env: &Env, contract: &RewardContract) {
+        // In a full implementation, we'd save to storage
     }
 }
 
@@ -431,12 +466,12 @@ mod test {
         let mut contract = RewardContract::initialize(env.clone(), admin.clone(), token_admin);
         
         // Get default achievements
-        let achievements = contract.list_achievements(env.clone());
+        let achievements = RewardContract::list_achievements(env.clone());
         assert!(achievements.len() > 0);
         
         // Update progress for first achievement (First Entry)
         let first_entry_id = 1; // Assuming this is the ID of the FirstEntry achievement
-        contract.update_progress(
+        RewardContract::update_progress(
             env.clone(),
             user.clone(),
             first_entry_id,
@@ -444,32 +479,32 @@ mod test {
         ).unwrap();
         
         // Check user's progress
-        let progress = contract.get_user_progress(env.clone(), user.clone());
+        let progress = RewardContract::get_user_progress(env.clone(), user.clone());
         assert_eq!(progress.len(), 1);
         assert_eq!(progress[0].achievement_id, first_entry_id);
         assert_eq!(progress[0].completed, true);
         
         // Check user's rewards
-        let rewards = contract.get_user_rewards(env.clone(), user.clone());
+        let rewards = RewardContract::get_user_rewards(env.clone(), user.clone());
         assert_eq!(rewards.len(), 1);
         assert_eq!(rewards[0].achievement_id, first_entry_id);
         assert_eq!(rewards[0].claimed, false);
         
         // Claim the reward
         let reward_id = rewards[0].id.clone();
-        contract.claim_reward(
+        RewardContract::claim_reward(
             env.clone(),
             user.clone(),
             reward_id,
         ).unwrap();
         
         // Check that reward is now claimed
-        let updated_rewards = contract.get_user_rewards(env.clone(), user.clone());
+        let updated_rewards = RewardContract::get_user_rewards(env.clone(), user.clone());
         assert_eq!(updated_rewards.len(), 1);
         assert_eq!(updated_rewards[0].claimed, true);
         
         // Try to claim again (should fail)
-        let result = contract.claim_reward(
+        let result = RewardContract::claim_reward(
             env.clone(),
             user.clone(),
             reward_id,

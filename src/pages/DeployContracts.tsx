@@ -5,7 +5,13 @@ const contracts = [
   'registry_contract.wasm',
   'cyclebuddy_auth_contract.wasm',
   'cyclebuddy_data_contract.wasm',
-  'cyclebuddy_community_contract.wasm'
+  'cyclebuddy_community_contract.wasm',
+  'donation_contract.wasm',
+  'data_sharing_contract.wasm',
+  'rewards_contract.wasm',
+  'zk_validation_contract.wasm',
+  'data_marketplace_contract.wasm',
+  'health_alerts_contract.wasm'
 ];
 
 export function DeployContracts() {
