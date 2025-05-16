@@ -451,6 +451,9 @@ export const DashboardPage = () => {
       const success = await stellarContractService.makeDonation(amount, initiativeId, currency);
       
       if (success) {
+
+        localStorage.setItem('total', (parseFloat(localStorage.getItem('total') || '0') - amount).toString());
+
         toast({
           title: 'Donation Successful',
           description: 'Thank you for your contribution!',
