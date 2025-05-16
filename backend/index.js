@@ -1,10 +1,23 @@
 const express = require('express');
 const mysql = require('mysql2/promise');
+const cors = require('cors'); // <--- ADD THIS
 require('dotenv').config();
+
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 const router = express.Router();
+
 const setupSecurityRoutes = require('./features/security');
+const setupCycleRoutes = require('./features/cycle');
+const setupProductivityRoutes = require('./features/productivity');
+
+// --- CORS middleware ---
+// Allow React frontend to talk to backend
+/* app.use(cors({
+  origin: 'http://localhost:3000', // Allow frontend origin
+  credentials: true,              // Allow cookies, auth headers, etc (if used)
+})); */
+app.use(cors());
 
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -22,6 +35,8 @@ const pool = mysql.createPool({
 
 // Register the security routes
 app.use('/api', setupSecurityRoutes(pool));
+app.use('/api', setupCycleRoutes(pool));
+app.use('/api', setupProductivityRoutes(pool));
 
 // Start the server
 app.listen(PORT, () => {
