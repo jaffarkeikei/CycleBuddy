@@ -26,7 +26,7 @@ import Layout from '../../components/layout/Layout';
 import FeaturePageTemplate from '../../components/common/FeaturePageTemplate';
 
 const DataSharingPage = () => {
-  const { server, address } = useSorobanReact();
+  // const { server, address } = useSorobanReact();
   const [dataConnections, setDataConnections] = useState([
     { id: 1, name: 'Dr. Amanda Chen', type: 'Healthcare', status: 'connected', avatar: 'AC' },
     { id: 2, name: 'Research Institute', type: 'Research', status: 'pending', avatar: 'RI' },

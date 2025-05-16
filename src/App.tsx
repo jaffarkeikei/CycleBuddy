@@ -17,8 +17,10 @@ import DonationPage from './pages/features/DonationPage';
 import RewardsPage from './pages/features/RewardsPage';
 import DataSharingPage from './pages/features/DataSharingPage';
 import AIHealthInsightsPage from './pages/features/AIHealthInsightsPage';
-import NFTEducationPage from './pages/features/NFTEducationPage';
-import ResearchMarketplacePage from './pages/features/ResearchMarketplacePage';
+import HealthAlertsPage from './pages/features/HealthAlertsPage';
+import SettingsPage from './pages/features/SettingsPage';
+import LogEntryPage from './pages/LogEntryPage';
+import FullCalendarPage from './pages/FullCalendarPage';
 
 // Components
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -36,7 +38,6 @@ import PasskeyTest from './tests/PasskeyTest';
 // const RewardsPage = () => <Box p={8}>Rewards Feature Page</Box>;
 const ZKValidationPage = () => <Box p={8}>ZK Validation Feature Page</Box>;
 const DataMarketplacePage = () => <Box p={8}>Data Marketplace Feature Page</Box>;
-const HealthAlertsPage = () => <Box p={8}>Health Alerts Feature Page</Box>;
 
 const connectors = [freighter()];
 
@@ -81,6 +82,26 @@ function App() {
               </ProtectedRoute>
             } />
             
+            {/* Cycle tracking routes */}
+            <Route path="/log-entry" element={
+              <ProtectedRoute>
+                <LogEntryPage />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/full-calendar" element={
+              <ProtectedRoute>
+                <FullCalendarPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Settings route */}
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <SettingsPage />
+              </ProtectedRoute>
+            } />
+            
             {/* Advanced Stellar Features Routes */}
             <Route path="/features/donate" element={
               <ProtectedRoute>
@@ -117,16 +138,6 @@ function App() {
             <Route path="/features/ai-health-insights" element={
               <ProtectedRoute>
                 <AIHealthInsightsPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/features/nft-education" element={
-              <ProtectedRoute>
-                <NFTEducationPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/features/research-marketplace" element={
-              <ProtectedRoute>
-                <ResearchMarketplacePage />
               </ProtectedRoute>
             } />
             

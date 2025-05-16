@@ -6,6 +6,7 @@
 
 
 [![Built on Stellar](https://img.shields.io/badge/Built%20on-Stellar-brightgreen)](https://stellar.org)
+[![Built on Bahamut](https://img.shields.io/badge/Built%20on-Bahamut-blue)](https://bahamut.io)
 [![Hackathon Project](https://img.shields.io/badge/EasyA-Consensus%20Hackathon-blue)](https://easya.io)
 
 > "Know your body, Own your cycle" - A Web3-powered menstrual health companion that puts privacy and education first.
@@ -48,10 +49,11 @@ graph TD
 - **Educational Hub**: Age-appropriate, clear guidance
 - **Anonymous Community**: Safe space for sharing and support
 - **Web3 Integration**: Utilizing blockchain for data sovereignty
+- **Daily Streak Rewards**: Earn CycleStreak tokens for consistent tracking on Bahamut blockchain
 
 ## Breakthrough Features
 
-CycleBuddy's three breakthrough features that set it apart from any other health application:
+CycleBuddy's breakthrough features that set it apart from any other health application:
 
 ### 1. AI-Powered Health Insights with Stellar Turrets
 
@@ -121,6 +123,29 @@ flowchart LR
 - **Reputation System**: Earn higher compensation as you build a reliable contribution history
 - **Direct Research Impact**: Track how your data helps important health research
 
+### 4. Daily Tracking Rewards with Bahamut Blockchain
+
+```mermaid
+flowchart LR
+    subgraph "Daily Rewards System"
+        direction TB
+        CheckIn([Daily Check-in]) --> Streak([Build Streak])
+        Streak --> Achieve([Complete Achievements])
+        Achieve --> Earn([Earn CycleStreak Tokens])
+    end
+    
+    style CheckIn fill:#ffcccc,stroke:#333,stroke-width:2px
+    style Streak fill:#ccffcc,stroke:#333,stroke-width:2px
+    style Achieve fill:#ccccff,stroke:#333,stroke-width:2px
+    style Earn fill:#ffffcc,stroke:#333,stroke-width:2px
+```
+
+- **Daily Check-in System**: Log in daily to maintain your streak and earn rewards
+- **Achievement-based Rewards**: Complete milestones to earn bonus tokens
+- **Fast Transaction Processing**: Bahamut's PoSA consensus provides ~2 second block times for instant rewards
+- **MetaMask Integration**: Seamless Web3 experience with popular wallet support
+- **ERC-20 Token Standard**: Use CycleStreak tokens in the broader ecosystem
+
 ## How Features Work Together
 
 ```mermaid
@@ -131,6 +156,7 @@ graph TD
     Learn --> Contribute[Contribute to Research]
     Contribute --> Better[Improve AI Models]
     Better --> Insights
+    Track --> Rewards[Earn Daily Rewards]
     
     style You fill:#f9a,stroke:#333,stroke-width:4px
     style Track fill:#adf,stroke:#333,stroke-width:2px
@@ -138,15 +164,21 @@ graph TD
     style Learn fill:#afd,stroke:#333,stroke-width:2px
     style Contribute fill:#dad,stroke:#333,stroke-width:2px
     style Better fill:#dfa,stroke:#333,stroke-width:2px
+    style Rewards fill:#fad,stroke:#333,stroke-width:2px
 ```
 
 ## 🛠 Technical Stack
 
-- **Blockchain**: Stellar Network
+- **Blockchains**: 
+  - Stellar Network: Core application functionality
+  - Bahamut Blockchain: Daily rewards and tracking system
 - **Authentication**: Stellar Passkeys Kit
 - **Frontend**: React.js with Chakra UI
-- **Smart Contracts**: Rust-based Stellar Smart Contracts
+- **Smart Contracts**: 
+  - Rust-based Stellar Smart Contracts
+  - Solidity contracts for Bahamut EVM
 - **Data Storage**: Decentralized IPFS/Stellar combination
+- **Wallets**: Freighter (Stellar) and MetaMask (Bahamut)
 
 ## Documentation
 
@@ -159,6 +191,7 @@ Detailed documentation can be found in the `/docs` directory:
 - [Development Guide](docs/development.md)
 - [API Documentation](docs/api.md)
 - [Smart Contracts](docs/smart-contracts.md)
+- [Daily Rewards System](docs/daily-rewards.md)
 
 ## Problem & Solution
 
@@ -186,12 +219,14 @@ flowchart TD
     Solution --> B[Intuitive Interface]
     Solution --> C[Educational Focus]
     Solution --> D[Supportive Community]
+    Solution --> E[Rewarding Consistency]
     
     style Solution fill:#ccffcc,stroke:#333,stroke-width:3px
     style A fill:#ddffdd,stroke:#333,stroke-width:2px
     style B fill:#ddffdd,stroke:#333,stroke-width:2px
     style C fill:#ddffdd,stroke:#333,stroke-width:2px
     style D fill:#ddffdd,stroke:#333,stroke-width:2px
+    style E fill:#ddffdd,stroke:#333,stroke-width:2px
 ```
 
 ## 🌱 Getting Started
@@ -202,6 +237,7 @@ flowchart TD
 - npm or yarn
 - [Stellar CLI](https://developers.stellar.org/docs/tools/developer-tools/stellar-cli)
 - [Freighter Wallet](https://www.freighter.app/) with funded testnet account
+- [MetaMask Wallet](https://metamask.io/) for Bahamut interaction
 
 ### Setup
 
@@ -226,21 +262,29 @@ flowchart TD
    - Install Stellar CLI if needed
    - Set up the Stellar testnet
 
-### Deploying Contracts to Testnet
+### Deploying Contracts
 
-To deploy the contracts to the Stellar testnet:
+#### Stellar Contracts
+
+To deploy the Stellar contracts to the testnet:
 
 1. Make sure you have [Freighter Wallet](https://www.freighter.app/) installed
 2. Fund your testnet account: [Stellar Laboratory](https://laboratory.stellar.org/#account-creator?network=test)
 3. Run the deployment script:
    ```
-   ./scripts/deploy-contracts.sh
+   npm run deploy:contracts
    ```
-   
-   This script will:
-   - Deploy the Registry, Auth, Data, and Community contracts
-   - Save the contract IDs to a `.env` file
-   - Set up the contracts for use with the app
+
+#### Bahamut Contracts
+
+To deploy the daily rewards system to Bahamut testnet:
+
+1. Create a `.env` file in the `contracts/bahamut` directory (refer to `.env.example`)
+2. Make sure you have [MetaMask](https://metamask.io/) installed with a funded Bahamut testnet account
+3. Run the deployment script:
+   ```
+   npm run bahamut:deploy:testnet
+   ```
 
 ### Running the App
 
@@ -266,10 +310,12 @@ journey
         Track Cycle: 5: User
         View Insights: 5: User
         Complete Education: 4: User
+        Check-in for Rewards: 5: User
     section Advanced Use
         Earn NFT Credentials: 5: User
         Contribute to Research: 4: User
         View Impact: 5: User
+        Build Tracking Streak: 5: User
 ```
 
 ## License
@@ -283,6 +329,7 @@ We welcome contributions! Please see our [Contributing Guide](docs/contributing.
 ## Acknowledgments
 
 - Stellar Foundation for their amazing blockchain platform
+- Bahamut Network for their fast EVM-compatible blockchain
 - EasyA Consensus Hackathon for the opportunity
 - Our early users and community for valuable feedback
 
@@ -294,44 +341,90 @@ We welcome contributions! Please see our [Contributing Guide](docs/contributing.
 
 ### Building and Deploying Contracts
 
-This project uses a streamlined workflow for building and testing Stellar Soroban contracts. The main tools for contract management are:
+This project uses streamlined workflows for building and testing both Stellar Soroban contracts and Bahamut EVM contracts.
+
+#### Stellar Contracts
 
 1. **Makefile** - Contains all commands for building, testing, and deploying contracts
 2. **DeployContracts Component** - Web UI for downloading contract files and providing deployment instructions
 
-### Common Contract Operations
+| Command | Description |
+|---------|-------------|
+| `npm run build:contracts` | Build all Stellar contracts and copy to public directory |
+| `npm run test:contracts` | Run all Stellar contract tests |
+| `npm run deploy:contracts` | Deploy Stellar contracts to testnet using soroban CLI |
+| `npm run deploy:testnet` | Deploy Stellar contracts using stellar CLI and save IDs to .env |
+
+#### Bahamut Contracts
+
+1. **Hardhat** - Framework for Ethereum/EVM development
+2. **Deployment Scripts** - Automated scripts for contract deployment and verification
 
 | Command | Description |
 |---------|-------------|
-| `npm run build:contracts` | Build all contracts and copy to public directory |
-| `npm run test:contracts` | Run all contract tests |
-| `npm run deploy:contracts` | Deploy contracts to Stellar testnet using soroban CLI |
-| `npm run deploy:testnet` | Deploy contracts using stellar CLI and save IDs to .env |
-| `npm run clean` | Clean build artifacts |
-| `npm run optimize:contracts` | Optimize compiled contracts |
-| `npm run generate:bindings` | Generate TypeScript bindings |
-
-### Manual Deployment via Web UI
-
-For a more user-friendly approach, you can use the DeployContracts page in the app:
-
-1. Connect your Freighter wallet
-2. Download each contract WASM file
-3. Follow the on-screen instructions to upload and deploy each contract
-4. Use the contract hash returned by each upload when deploying
-
-This approach is useful when you need to deploy contracts from a different environment than your development machine.
-
-### Deployment Command Details
-
-Under the hood, these commands use the Makefile. To view the specific commands and options:
-
-```bash
-# View available make targets
-make help
-
-# Specify a custom Stellar address for deployment
-make deploy STELLAR_ADDRESS=GBUKOFF6FX6767LKKOD3P7KAS43I3Z7CNUBPCH33YZKPPR53ZDHAHCER
-```
+| `npm run bahamut:compile` | Compile Solidity contracts using Hardhat |
+| `npm run bahamut:test` | Run tests for Bahamut contracts |
+| `npm run bahamut:deploy:testnet` | Deploy contracts to Bahamut testnet |
+| `npm run bahamut:deploy:mainnet` | Deploy contracts to Bahamut mainnet |
+| `npm run bahamut:verify` | Verify contracts on Bahamut Explorer |
 
 ---
+
+# CycleBuddy Bahamut Contracts
+
+This directory contains the smart contracts for the CycleBuddy app on the Bahamut blockchain.
+
+## Development Setup
+
+### Prerequisites
+
+- Node.js (v14+)
+- NPM or Yarn
+
+### Installation
+
+1. Install dependencies:
+   ```
+   npm install
+   ```
+
+2. Compile contracts:
+   ```
+   npx hardhat compile
+   ```
+
+### Local Development
+
+1. Start a local Hardhat node in a separate terminal:
+   ```
+   npx hardhat node
+   ```
+
+2. The contracts are preconfigured to work with the local Hardhat node. The default accounts and deployed contract addresses are already set up in the `deployed-addresses.json` file.
+
+3. If you want to deploy the contracts manually:
+   ```
+   npx hardhat run --network localhost scripts/deploy-local.js
+   ```
+
+### Contract Addresses
+
+The `deployed-addresses.json` file contains the addresses of the deployed contracts:
+
+- `CycleStreakToken`: `0x5FbDB2315678afecb367f032d93F642f64180aa3`
+- `DailyRewards`: `0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512`
+
+These are the default addresses when deploying to the local Hardhat node.
+
+### Testing with MetaMask
+
+1. Add the local Hardhat network to MetaMask:
+   - Network Name: Hardhat Local
+   - RPC URL: http://127.0.0.1:8545
+   - Chain ID: 1337
+   - Currency Symbol: ETH
+
+2. Import one of the test accounts using the private key:
+   - Account #0: `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
+
+3. Now you can interact with the contracts through the CycleBuddy app UI.

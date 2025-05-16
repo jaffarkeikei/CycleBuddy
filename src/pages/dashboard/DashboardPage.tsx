@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -39,8 +39,6 @@ import {
   TabPanels,
   Tab,
   TabPanel,
-  Image,
-  Stack,
   Modal,
   ModalOverlay,
   ModalContent,
@@ -52,7 +50,6 @@ import {
   FormControl,
   FormLabel,
   Input,
-  Textarea,
   Select,
   Checkbox,
   Alert,
@@ -60,12 +57,13 @@ import {
   AlertDescription,
   Spinner,
   Icon,
-  Link as ChakraLink,
+  Tooltip,
 } from '@chakra-ui/react';
 import { useAuthStore } from '../../services/auth/authService';
 import { keyframes } from '@emotion/react';
 import { passkeyService } from '../../services/auth/passkeyService';
 import { stellarContractService } from '../../services/stellar/contractService';
+import { bahamutContractService } from '../../services/bahamut/contractService';
 import { 
   FaHome, 
   FaBrain, 
@@ -83,9 +81,21 @@ import {
   FaExclamationTriangle,
   FaBell,
   FaInfoCircle,
-  FaCheck
+  FaCheck,
+  FaCalendarAlt,
+  FaTimes,
+  FaSmile, 
+  FaMeh, 
+  FaFrown, 
+  FaRegLightbulb, 
+  FaRegChartBar,
+  FaHistory,
+  FaPlus,
 } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import { CycleCalendar, CycleDay } from '../../components/dashboard/CycleCalendar';
+import { format, subDays, differenceInDays } from 'date-fns';
+import { geminiService, TaskAnalysisResult, MoodInsight, DetailedHealthInsight } from '../../services/ai/geminiService';
+import CycleBuddyAI from '../../components/dashboard/CycleBuddyAI';
 
 // Create a keyframe animation for the gradient
 const animatedGradient = keyframes`
@@ -95,30 +105,24 @@ const animatedGradient = keyframes`
 `;
 
 // Mock data
-const recentCycleData = [
+const recentCycleData: CycleDay[] = [
   { day: 1, mood: 'Good', symptoms: ['Cramps', 'Fatigue'], date: '2025-09-01' },
   { day: 2, mood: 'Fair', symptoms: ['Bloating'], date: '2025-09-02' },
   { day: 3, mood: 'Great', symptoms: [], date: '2025-09-03' },
 ];
 
-// Information cards data
-const infoCards = [
-  {
-    title: 'Cycle Health Tips',
-    content: 'Regular exercise can help reduce menstrual pain and improve mood.',
-    emoji: '📈',
-  },
-  {
-    title: 'Did You Know?',
-    content: 'The average menstrual cycle is 28 days, but anywhere from 21 to 35 days is considered normal.',
-    emoji: '📅',
-  },
-  {
-    title: 'Community Highlight',
-    content: 'Join our discussion on natural remedies for menstrual discomfort.',
-    emoji: '👥',
-  },
-];
+// Function to determine phase based on cycle day
+const getPhaseFromDay = (day: number): CycleDay['phase'] => {
+  if (day <= 5) {
+    return 'menstruation';
+  } else if (day <= 13) {
+    return 'follicular';
+  } else if (day <= 15) {
+    return 'ovulation';
+  } else {
+    return 'luteal';
+  }
+};
 
 // Stellar blockchain features
 const blockchainFeatures = [
@@ -140,16 +144,14 @@ const blockchainFeatures = [
 ];
 
 // Advanced Stellar features
-const advancedFeatures = [
+const initialAdvancedFeatures = [
   {
     title: 'Donate to Research',
-    description: 'Support menstrual health research initiatives using Stellar\'s path payment feature. Donate in any currency, automatically converted to the recipient\'s preferred currency.',
     emoji: '💰',
     modalType: 'donation',
   },
   {
-    title: 'Share Health Data',
-    description: 'Securely share your health data with medical professionals using time-limited multi-signature authorization that automatically expires.',
+    title: 'Share Data with Physician',
     emoji: '🔄',
     modalType: 'dataSharing',
   },
@@ -160,24 +162,15 @@ const advancedFeatures = [
     modalType: 'rewards',
   },
   {
-    title: 'Private Data Validation',
-    description: 'Validate health metrics without revealing sensitive data through zero-knowledge proofs on the Stellar network.',
-    emoji: '✅',
-    modalType: 'zkValidation',
-  },
-  {
     title: 'Monetize Your Data',
-    description: 'Anonymously contribute to research data pools with transparent revenue sharing through Stellar\'s trustless payment system.',
     emoji: '📊',
     modalType: 'dataMarketplace',
   },
-  {
-    title: 'Health Alerts',
-    description: 'Receive automated health alerts for concerning patterns through Stellar Turrets, without compromising your privacy.',
-    emoji: '⚠️',
-    modalType: 'healthAlerts',
-  },
 ];
+
+// Extract Rewards feature
+const rewardsFeature = initialAdvancedFeatures.find(feature => feature.modalType === 'rewards');
+const advancedFeatures = initialAdvancedFeatures.filter(feature => feature.modalType !== 'rewards');
 
 // Add this in the advancedFeatures array after the existing items
 const breakthroughFeatures = [
@@ -204,11 +197,104 @@ const breakthroughFeatures = [
   },
 ];
 
+// Add mock data for AI-powered task suggestions based on cycle phases
+const cyclePhaseTaskRecommendations = {
+  menstruation: {
+    optimal: ['Rest and recovery', 'Gentle yoga', 'Creative writing', 'Reflection', 'Planning'],
+    avoid: ['High-intensity workouts', 'Important meetings', 'Critical decisions']
+  },
+  follicular: {
+    optimal: ['Learning new skills', 'Starting projects', 'Problem solving', 'Social activities', 'Moderate exercise'],
+    avoid: ['Repetitive tasks', 'Mundane work']
+  },
+  ovulation: {
+    optimal: ['Presentations', 'Job interviews', 'Networking', 'Important meetings', 'High-intensity workouts'],
+    avoid: ['Detailed analytical work', 'Solitary tasks']
+  },
+  luteal: {
+    optimal: ['Detail-oriented work', 'Organization', 'Research', 'Analysis', 'Routine tasks'],
+    avoid: ['High-stress situations', 'Major social events']
+  }
+};
+
+// User tasks with AI-assigned optimal phases
+const userTasks: Task[] = [
+  { id: 1, title: 'Go to the gym', optimalPhases: ['follicular', 'ovulation'], added: '2025-09-01', completed: false },
+  { id: 2, title: 'Weekly team presentation', optimalPhases: ['ovulation'], added: '2025-09-01', completed: false },
+  { id: 3, title: 'Organize workspace', optimalPhases: ['luteal'], added: '2025-09-01', completed: true },
+  { id: 4, title: 'Learn new programming language', optimalPhases: ['follicular'], added: '2025-09-02', completed: false },
+  { id: 5, title: 'Meditation session', optimalPhases: ['menstruation', 'luteal'], added: '2025-09-02', completed: false },
+];
+
+// Add mock data for mood trends and historical data
+const moodTrendData = [
+  { date: '2025-08-25', mood: 'Fair', phase: 'luteal' },
+  { date: '2025-08-26', mood: 'Poor', phase: 'luteal' },
+  { date: '2025-08-27', mood: 'Fair', phase: 'luteal' },
+  { date: '2025-08-28', mood: 'Good', phase: 'menstruation' },
+  { date: '2025-08-29', mood: 'Fair', phase: 'menstruation' },
+  { date: '2025-08-30', mood: 'Fair', phase: 'menstruation' },
+  { date: '2025-08-31', mood: 'Good', phase: 'menstruation' },
+  { date: '2025-09-01', mood: 'Good', phase: 'menstruation' },
+  { date: '2025-09-02', mood: 'Fair', phase: 'follicular' },
+  { date: '2025-09-03', mood: 'Great', phase: 'follicular' },
+];
+
+const topSymptoms = [
+  { name: 'Cramps', count: 8, phase: 'menstruation' },
+  { name: 'Fatigue', count: 7, phases: ['menstruation', 'luteal'] },
+  { name: 'Bloating', count: 6, phases: ['luteal', 'menstruation'] },
+  { name: 'Headache', count: 4, phase: 'luteal' },
+  { name: 'Mood Swings', count: 3, phase: 'luteal' },
+];
+
+// Default mood insights (will be replaced by AI-generated insights when available)
+const defaultMoodInsights: MoodInsight[] = [
+  {
+    title: "Energy Correlation",
+    text: "Your mood tends to improve 2 days after your period starts. Consider planning social activities during this time.",
+    color: "blue"
+  },
+  {
+    title: "Symptom Pattern",
+    text: "Headaches most commonly occur 2-3 days before your period. Try preventative measures like staying hydrated.",
+    color: "orange"
+  },
+  {
+    title: "Mood Triggers",
+    text: "Lower moods correlate with poor sleep the night before. Consider prioritizing sleep during your luteal phase.",
+    color: "purple"
+  }
+];
+
+// Helper function to get emoji for mood
+const getMoodEmoji = (mood: string) => {
+  switch (mood) {
+    case 'Great': return { icon: FaSmile, color: 'green.500' };
+    case 'Good': return { icon: FaSmile, color: 'blue.500' };
+    case 'Fair': return { icon: FaMeh, color: 'yellow.500' };
+    case 'Poor': return { icon: FaFrown, color: 'red.500' };
+    default: return { icon: FaSmile, color: 'blue.500' };
+  }
+};
+
+interface Task {
+  id: number;
+  title: string;
+  optimalPhases: string[];
+  added: string;
+  completed: boolean;
+  analysis?: TaskAnalysisResult;
+}
+
 export const DashboardPage = () => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const toast = useToast();
-  const [cycleData] = useState(recentCycleData);
+  const [cycleData, setCycleData] = useState<CycleDay[]>(recentCycleData.map(data => ({
+    ...data,
+    phase: getPhaseFromDay(data.day)
+  })));
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [activeFeature, setActiveFeature] = useState<any>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -217,6 +303,27 @@ export const DashboardPage = () => {
   const [xlmBalance, setXlmBalance] = useState<number | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isBahamutConnected, setIsBahamutConnected] = useState(false);
+  const [cycleStreakBalance, setCycleStreakBalance] = useState('0');
+  const [isLoadingStreakBalance, setIsLoadingStreakBalance] = useState(false);
+  const [userStreak, setUserStreak] = useState<{
+    currentStreak: number;
+    longestStreak: number;
+    lastCheckInTimestamp: number;
+  } | null>(null);
+  const [tasks, setTasks] = useState<Task[]>(userTasks);
+  const [newTask, setNewTask] = useState('');
+  const [isAnalyzingTask, setIsAnalyzingTask] = useState(false);
+  const [trackerTabIndex, setTrackerTabIndex] = useState(0);
+  
+  // Add state for AI-generated insights
+  const [moodInsights, setMoodInsights] = useState<MoodInsight[]>(defaultMoodInsights);
+  const [commonPattern, setCommonPattern] = useState<string>(`Based on your history, <b>Fatigue</b> and <b>Headaches</b> are common during your current phase. Consider extra rest and hydration.`);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  
+  // Add state for detailed health insights
+  const [detailedInsights, setDetailedInsights] = useState<DetailedHealthInsight[]>([]);
+  const [isLoadingDetailedInsights, setIsLoadingDetailedInsights] = useState(false);
   
   // Animated card style
   const cardGradient = useColorModeValue(
@@ -255,6 +362,35 @@ export const DashboardPage = () => {
     
     loadData();
   }, []);
+  
+  // Check Bahamut wallet connection and load data
+  useEffect(() => {
+    const checkBahamutConnection = async () => {
+      try {
+        setIsLoadingStreakBalance(true);
+        const isConnected = await bahamutContractService.isWalletConnected();
+        setIsBahamutConnected(isConnected);
+        
+        if (isConnected) {
+          // Load token balance
+          const balance = await bahamutContractService.getTokenBalance();
+          setCycleStreakBalance(balance);
+          
+          // Load user streak
+          const streak = await bahamutContractService.getUserStreak();
+          if (streak) {
+            setUserStreak(streak);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking Bahamut connection:', error);
+      } finally {
+        setIsLoadingStreakBalance(false);
+      }
+    };
+    
+    checkBahamutConnection();
+  }, []);
 
   // Handle logout
   const handleLogout = () => {
@@ -269,8 +405,15 @@ export const DashboardPage = () => {
     });
   };
   
-  // Open feature modal
+  // Open feature modal or navigate to settings page
   const openFeatureModal = (feature: any) => {
+    // If this feature is settings, navigate directly
+    if (feature.modalType === 'settings') {
+      navigate('/settings');
+      return;
+    }
+    
+    // Otherwise open the modal
     setActiveFeature(feature);
     onOpen();
   };
@@ -332,41 +475,153 @@ export const DashboardPage = () => {
     }
   };
 
+  const handleConnectBahamut = async () => {
+    try {
+      const success = await bahamutContractService.connectWallet();
+      if (success) {
+        setIsBahamutConnected(true);
+        
+        // Load token balance
+        const balance = await bahamutContractService.getTokenBalance();
+        setCycleStreakBalance(balance);
+        
+        // Load user streak
+        const streak = await bahamutContractService.getUserStreak();
+        if (streak) {
+          setUserStreak(streak);
+        }
+        
+        toast({
+          title: 'Wallet Connected',
+          description: 'Your MetaMask wallet is now connected to Bahamut network.',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        toast({
+          title: 'Connection Failed',
+          description: 'Failed to connect to MetaMask. Please make sure it is installed and unlocked.',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error connecting to Bahamut:', error);
+      toast({
+        title: 'Connection Error',
+        description: 'An error occurred while connecting to Bahamut network.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+  
+  const handleDailyCheckIn = async () => {
+    setCurrentAction('dailyCheckIn');
+    setIsAuthenticating(true);
+    setAuthError(null);
+    
+    try {
+      if (!isBahamutConnected) {
+        await handleConnectBahamut();
+      }
+      
+      const success = await bahamutContractService.dailyCheckIn();
+      
+      if (success) {
+        toast({
+          title: 'Daily Check-In Successful',
+          description: 'You have successfully checked in and earned rewards!',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+        
+        // Refresh balances and streak
+        const balance = await bahamutContractService.getTokenBalance();
+        setCycleStreakBalance(balance);
+        
+        const streak = await bahamutContractService.getUserStreak();
+        if (streak) {
+          setUserStreak(streak);
+        }
+        
+        onClose();
+      } else {
+        throw new Error("Failed to check in");
+      }
+    } catch (error) {
+      console.error('Error during daily check-in:', error);
+      setAuthError(error instanceof Error ? error.message : 'Check-in failed');
+    } finally {
+      setIsAuthenticating(false);
+      setCurrentAction(null);
+    }
+  };
+
   const handleClaimRewards = async () => {
     setCurrentAction('claimRewards');
     setIsAuthenticating(true);
     setAuthError(null);
     
     try {
-      const authResult = await passkeyService.authenticateWithPasskey();
-      
-      if (!authResult.success) {
-        throw new Error("Authentication failed");
-      }
-      
-      // Use the Stellar-specific rewards claiming implementation
-      const success = await stellarContractService.claimRewards();
-      
-      if (success) {
-        toast({
-          title: 'Rewards Claimed',
-          description: `25 XLM has been added to your wallet!`,
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
+      // Check if we're using Bahamut or Stellar
+      if (isBahamutConnected) {
+        // Use Bahamut rewards claiming
+        const success = await bahamutContractService.claimAllRewards();
         
-        // Refresh the XLM balance
-        const balance = await stellarContractService.getXLMBalance();
-        setXlmBalance(balance);
-        
-        onClose();
+        if (success) {
+          toast({
+            title: 'Rewards Claimed',
+            description: 'Your CycleStreak tokens have been added to your wallet!',
+            status: 'success',
+            duration: 3000,
+            isClosable: true,
+          });
+          
+          // Refresh the CSTRK balance
+          const balance = await bahamutContractService.getTokenBalance();
+          setCycleStreakBalance(balance);
+          
+          onClose();
+        } else {
+          throw new Error("Failed to claim rewards");
+        }
       } else {
-        throw new Error("Failed to claim rewards");
+        // Use Stellar for older implementation (legacy support)
+        const authResult = await passkeyService.authenticateWithPasskey();
+        
+        if (!authResult.success) {
+          throw new Error("Authentication failed");
+        }
+        
+        // Use the Stellar-specific rewards claiming implementation
+        const success = await stellarContractService.claimRewards();
+        
+        if (success) {
+          toast({
+            title: 'Rewards Claimed',
+            description: `25 XLM has been added to your wallet!`,
+            status: 'success',
+            duration: 3000,
+            isClosable: true,
+          });
+          
+          // Refresh the XLM balance
+          const balance = await stellarContractService.getXLMBalance();
+          setXlmBalance(balance);
+          
+          onClose();
+        } else {
+          throw new Error("Failed to claim rewards");
+        }
       }
     } catch (error) {
-      console.error('Error during authentication:', error);
-      setAuthError(error instanceof Error ? error.message : 'Authentication failed');
+      console.error('Error during rewards claiming:', error);
+      setAuthError(error instanceof Error ? error.message : 'Failed to claim rewards');
     } finally {
       setIsAuthenticating(false);
       setCurrentAction(null);
@@ -529,54 +784,118 @@ export const DashboardPage = () => {
     }
   };
 
-  const handleSaveHealthAlertSettings = async () => {
-    setCurrentAction('healthAlerts');
-    setIsAuthenticating(true);
-    setAuthError(null);
-    try {
-      const authResult = await passkeyService.authenticateWithPasskey();
-      if (!authResult.success) {
-        throw new Error("Authentication failed for saving health alert settings");
+  // Health alerts configuration moved to HealthAlertsPage
+
+  // Function to handle updates to cycle data
+  const handleCycleDataUpdate = (updatedData: CycleDay) => {
+    // Check if we're updating an existing entry or adding a new one
+    const existingIndex = cycleData.findIndex(data => data.date === updatedData.date);
+    
+    if (existingIndex >= 0) {
+      // Update existing entry
+      const updatedCycleData = [...cycleData];
+      updatedCycleData[existingIndex] = updatedData;
+      setCycleData(updatedCycleData);
+    } else {
+      // Add new entry
+      setCycleData([...cycleData, updatedData]);
+    }
+    
+    toast({
+      title: 'Cycle data saved',
+      description: 'Your entry has been recorded successfully.',
+      status: 'success',
+      duration: 3000,
+      isClosable: true,
+    });
+  };
+
+  // Get current phase based on cycle data
+  const getCurrentPhase = () => {
+    if (!cycleData || cycleData.length === 0) return 'follicular';
+    return cycleData[0].phase || 'follicular';
+  };
+  
+  const currentPhase = getCurrentPhase();
+  
+  // Load AI-generated insights when component mounts or currentPhase changes
+  useEffect(() => {
+    const loadHealthInsights = async () => {
+      setIsLoadingInsights(true);
+      try {
+        const insights = await geminiService.generateHealthInsights(cycleData, currentPhase);
+        setMoodInsights(insights.moodInsights);
+        setCommonPattern(insights.commonPatterns);
+      } catch (error) {
+        console.error('Error loading health insights:', error);
+        // Fallback to defaults is handled by the service
+      } finally {
+        setIsLoadingInsights(false);
       }
+    };
+    
+    loadHealthInsights();
+  }, [cycleData, currentPhase]);
+  
+  // Function to handle adding a new task
+  const handleAddTask = async () => {
+    if (!newTask.trim()) return;
+    
+    setIsAnalyzingTask(true);
+    
+    try {
+      // Use Gemini to analyze the task
+      const analysis = await geminiService.analyzeTask(newTask);
       
-      // Get the checked alert types and notification channels
-      const alertCheckboxes = document.querySelectorAll('input[type="checkbox"]:checked') as NodeListOf<HTMLInputElement>;
+      const newTaskObj: Task = {
+        id: tasks.length + 1,
+        title: newTask,
+        optimalPhases: analysis.optimalPhases,
+        added: format(new Date(), 'yyyy-MM-dd'),
+        completed: false,
+        analysis: analysis,
+      };
       
-      const alertTypes: string[] = [];
-      const notificationChannels: string[] = [];
+      setTasks([...tasks, newTaskObj]);
+      setNewTask('');
       
-      // Separate alert types from notification channels
-      alertCheckboxes.forEach(cb => {
-        const text = cb.parentElement?.textContent?.trim() || '';
-        if (['Irregular Cycle Detection', 'Unusual Symptom Patterns', 'Medication Reminders', 'Health Check Reminders'].includes(text)) {
-          alertTypes.push(text);
-        } else if (['In-App', 'Email', 'Push Notification'].includes(text)) {
-          notificationChannels.push(text);
-        }
+      toast({
+        title: 'Task Added',
+        description: `Task analyzed and optimized for ${analysis.optimalPhases.join(', ')} phase(s)`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('Error analyzing task:', error);
+      toast({
+        title: 'Task Analysis Error',
+        description: 'Could not analyze task with AI. Added with default settings.',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
       });
       
-      // Use the Stellar-specific health alerts implementation
-      const success = await stellarContractService.configureHealthAlerts(alertTypes, notificationChannels);
+      // Fallback to basic task addition
+      const newTaskObj: Task = {
+        id: tasks.length + 1,
+        title: newTask,
+        optimalPhases: [currentPhase],
+        added: format(new Date(), 'yyyy-MM-dd'),
+        completed: false,
+      };
       
-      if (success) {
-        toast({
-          title: 'Settings Saved',
-          description: 'Your health alert settings have been updated.',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-        onClose();
-      } else {
-        throw new Error("Failed to save health alert settings");
-      }
-    } catch (error) {
-      console.error('Error during health alert settings authentication:', error);
-      setAuthError(error instanceof Error ? error.message : 'Authentication failed');
+      setTasks([...tasks, newTaskObj]);
+      setNewTask('');
     } finally {
-      setIsAuthenticating(false);
-      setCurrentAction(null);
+      setIsAnalyzingTask(false);
     }
+  };
+  
+  const toggleTaskComplete = (taskId: number) => {
+    setTasks(tasks.map(task => 
+      task.id === taskId ? { ...task, completed: !task.completed } : task
+    ));
   };
 
   // Modal content based on feature type
@@ -591,7 +910,7 @@ export const DashboardPage = () => {
             <ModalCloseButton />
             <ModalBody>
               <VStack spacing={4} align="stretch">
-                <Text>Support menstrual health research initiatives with Stellar's path payment feature.</Text>
+                <Text>Support menstrual health research initiatives. Donate in any currency, automatically converted to the recipient's preferred currency.</Text>
                 <FormControl>
                   <FormLabel>Initiative</FormLabel>
                   <Select placeholder="Select initiative">
@@ -642,7 +961,7 @@ export const DashboardPage = () => {
             <ModalCloseButton />
             <ModalBody>
               <VStack spacing={4} align="stretch">
-                <Text>Share your health data securely with time-limited access control.</Text>
+                <Text>Securely share your health data with medical professionals using time-limited multi-signature authorization that automatically expires.</Text>
                 <FormControl>
                   <FormLabel>Share With</FormLabel>
                   <Input placeholder="Healthcare provider's Stellar address or email" />
@@ -692,129 +1011,126 @@ export const DashboardPage = () => {
             <ModalHeader bgGradient={cardGradient} bgClip="text">Rewards Program</ModalHeader>
             <ModalCloseButton />
             <ModalBody>
-              <VStack spacing={4} align="stretch">
-                <Stat>
-                  <StatLabel>Available Rewards</StatLabel>
-                  <StatNumber>25 XLM</StatNumber>
-                  <StatHelpText>Earned from consistent tracking</StatHelpText>
-                </Stat>
-                <Divider />
-                <Text fontWeight="bold">Completed Achievements</Text>
-                <HStack>
-                  <Badge colorScheme="green">First Entry</Badge>
-                  <Badge colorScheme="purple">7-Day Streak</Badge>
-                  <Badge colorScheme="blue">Educational Quiz</Badge>
-                </HStack>
-                <Divider />
-                <Text fontWeight="bold">Next Achievements</Text>
-                <VStack align="start">
-                  <HStack>
-                    <Text>30-Day Tracking Streak</Text>
-                    <Progress value={70} size="sm" colorScheme="purple" borderRadius="full" flex="1" />
-                    <Text>+50 XLM</Text>
-                  </HStack>
-                  <HStack>
-                    <Text>Complete Health Course</Text>
-                    <Progress value={40} size="sm" colorScheme="purple" borderRadius="full" flex="1" />
-                    <Text>+30 XLM</Text>
-                  </HStack>
-                </VStack>
-                
-                {authError && currentAction === 'claimRewards' && (
-                  <Alert status="error" borderRadius="md">
-                    <AlertIcon />
-                    <AlertDescription>{authError}</AlertDescription>
-                  </Alert>
-                )}
-              </VStack>
+              <Tabs variant="soft-rounded" colorScheme="purple" mb={4}>
+                <TabList>
+                  <Tab>Bahamut Rewards</Tab>
+                  <Tab>Stellar Rewards</Tab>
+                </TabList>
+                <TabPanels>
+                  <TabPanel>
+                    <VStack spacing={4} align="stretch">
+                      {!isBahamutConnected ? (
+                        <Box textAlign="center" py={4}>
+                          <Text mb={4}>Connect your MetaMask wallet to access the new daily rewards system on Bahamut blockchain.</Text>
+                          <Button 
+                            colorScheme="blue" 
+                            onClick={handleConnectBahamut}
+                            mb={4}
+                          >
+                            Connect MetaMask
+                          </Button>
+                        </Box>
+                      ) : (
+                        <>
+                          <SimpleGrid columns={2} spacing={4}>
+                            <Stat>
+                              <StatLabel>CSTRK Balance</StatLabel>
+                              <StatNumber>{parseFloat(cycleStreakBalance).toFixed(2)}</StatNumber>
+                              <StatHelpText>CycleStreak Tokens</StatHelpText>
+                            </Stat>
+                            <Stat>
+                              <StatLabel>Current Streak</StatLabel>
+                              <StatNumber>{userStreak?.currentStreak || 0} days</StatNumber>
+                              <StatHelpText>Longest: {userStreak?.longestStreak || 0} days</StatHelpText>
+                            </Stat>
+                          </SimpleGrid>
+                          
+                          <Box>
+                            <Button
+                              colorScheme="green"
+                              width="100%"
+                              onClick={handleDailyCheckIn}
+                              isLoading={isAuthenticating && currentAction === 'dailyCheckIn'}
+                              loadingText="Checking in..."
+                              mb={4}
+                            >
+                              Daily Check-in
+                            </Button>
+                          </Box>
+                          
+                          <Divider />
+                          
+                          <Text fontWeight="bold" mb={2}>Achievements & Rewards</Text>
+                          <Button
+                            colorScheme="purple"
+                            width="100%"
+                            onClick={handleClaimRewards}
+                            isLoading={isAuthenticating && currentAction === 'claimRewards'}
+                            loadingText="Claiming..."
+                          >
+                            Claim All Rewards
+                          </Button>
+                        </>
+                      )}
+                      
+                      {authError && (currentAction === 'dailyCheckIn' || currentAction === 'claimRewards') && (
+                        <Alert status="error" borderRadius="md" mt={4}>
+                          <AlertIcon />
+                          <AlertDescription>{authError}</AlertDescription>
+                        </Alert>
+                      )}
+                    </VStack>
+                  </TabPanel>
+                  <TabPanel>
+                    <VStack spacing={4} align="stretch">
+                      <Stat>
+                        <StatLabel>Available Rewards</StatLabel>
+                        <StatNumber>25 XLM</StatNumber>
+                        <StatHelpText>Earned from consistent tracking (Legacy)</StatHelpText>
+                      </Stat>
+                      <Divider />
+                      <Text fontWeight="bold">Completed Achievements</Text>
+                      <HStack>
+                        <Badge colorScheme="green">First Entry</Badge>
+                        <Badge colorScheme="purple">7-Day Streak</Badge>
+                        <Badge colorScheme="blue">Educational Quiz</Badge>
+                      </HStack>
+                      <Divider />
+                      <Text fontWeight="bold">Next Achievements</Text>
+                      <VStack align="start">
+                        <HStack>
+                          <Text>30-Day Tracking Streak</Text>
+                          <Progress value={70} size="sm" colorScheme="purple" borderRadius="full" flex="1" />
+                          <Text>+50 XLM</Text>
+                        </HStack>
+                        <HStack>
+                          <Text>Complete Health Course</Text>
+                          <Progress value={40} size="sm" colorScheme="purple" borderRadius="full" flex="1" />
+                          <Text>+30 XLM</Text>
+                        </HStack>
+                      </VStack>
+                      
+                      <Text fontSize="sm" color="orange.500" mt={2}>
+                        Note: We are transitioning to our new rewards system on Bahamut. Please switch to the Bahamut Rewards tab.
+                      </Text>
+                      
+                      {authError && currentAction === 'claimRewards' && (
+                        <Alert status="error" borderRadius="md">
+                          <AlertIcon />
+                          <AlertDescription>{authError}</AlertDescription>
+                        </Alert>
+                      )}
+                    </VStack>
+                  </TabPanel>
+                </TabPanels>
+              </Tabs>
             </ModalBody>
             <ModalFooter>
-              <Button 
-                sx={animatedGradientStyle} 
-                mr={3} 
-                onClick={handleClaimRewards}
-                isLoading={isAuthenticating && currentAction === 'claimRewards'}
-                loadingText="Authenticating..."
-              >
-                Claim Rewards
-              </Button>
               <Button variant="ghost" onClick={onClose}>Close</Button>
             </ModalFooter>
           </>
         );
-      
-      case 'zkValidation':
-        return (
-          <>
-            <ModalHeader bgGradient={cardGradient} bgClip="text">Private Data Validation</ModalHeader>
-            <ModalCloseButton />
-            <ModalBody>
-              <VStack spacing={4} align="stretch">
-                <Text>Validate health metrics without revealing sensitive information using zero-knowledge proofs.</Text>
-                <Box bg="gray.50" p={4} borderRadius="md">
-                  <Text fontWeight="bold" mb={2}>Available Validations:</Text>
-                  <List spacing={2}>
-                    <ListItem>
-                      <HStack justifyContent="space-between">
-                        <Text>Cycle Length (Normal Range)</Text>
-                        <Badge colorScheme="green">Validated</Badge>
-                      </HStack>
-                    </ListItem>
-                    <ListItem>
-                      <HStack justifyContent="space-between">
-                        <Text>Regular Tracking (Last 30 Days)</Text>
-                        <Badge colorScheme="green">Validated</Badge>
-                      </HStack>
-                    </ListItem>
-                    <ListItem>
-                      <HStack justifyContent="space-between">
-                        <Text>Symptom Pattern Analysis</Text>
-                        <Button 
-                          size="xs" 
-                          sx={animatedGradientStyle}
-                          onClick={() => handleValidationAction('zk-validate-symptom')}
-                          isLoading={isAuthenticating && currentAction === 'zk-validate-symptom'}
-                          loadingText="Auth..."
-                        >
-                          Validate Now
-                        </Button>
-                      </HStack>
-                    </ListItem>
-                  </List>
-                </Box>
-                <Divider />
-                <Text fontWeight="bold">Request New Validation</Text>
-                <FormControl>
-                  <FormLabel>Validation Type</FormLabel>
-                  <Select placeholder="Select validation type">
-                    <option value="cycle">Cycle Length Validation</option>
-                    <option value="tracking">Tracking Consistency</option>
-                    <option value="symptoms">Symptom Pattern Analysis</option>
-                  </Select>
-                </FormControl>
-                {authError && currentAction?.startsWith('zk-') && (
-                  <Alert status="error" borderRadius="md">
-                    <AlertIcon />
-                    <AlertDescription>{authError}</AlertDescription>
-                  </Alert>
-                )}
-              </VStack>
-            </ModalBody>
-            <ModalFooter>
-              <Button 
-                sx={animatedGradientStyle} 
-                mr={3}
-                onClick={() => handleValidationAction('zk-create-validation')}
-                isLoading={isAuthenticating && currentAction === 'zk-create-validation'}
-                loadingText="Authenticating..."
-              >
-                Create Validation
-              </Button>
-              <Button variant="ghost" onClick={onClose}>Cancel</Button>
-            </ModalFooter>
-          </>
-        );
-        
+
       case 'dataMarketplace':
         return (
           <>
@@ -822,7 +1138,7 @@ export const DashboardPage = () => {
             <ModalCloseButton />
             <ModalBody>
               <VStack spacing={4} align="stretch">
-                <Text>Contribute anonymized data to research pools and earn rewards through Stellar's revenue sharing.</Text>
+                <Text>Contribute anonymized data to research pools and earn rewards through Stellar's trustless revenue sharing.</Text>
                 <Tabs variant="soft-rounded" colorScheme="purple" isFitted>
                   <TabList>
                     <Tab>Contribute Data</Tab>
@@ -884,65 +1200,27 @@ export const DashboardPage = () => {
           </>
         );
         
-      case 'healthAlerts':
+      case 'settings':
         return (
           <>
-            <ModalHeader bgGradient={cardGradient} bgClip="text">Health Alerts</ModalHeader>
+            <ModalHeader bgGradient={cardGradient} bgClip="text">Settings</ModalHeader>
             <ModalCloseButton />
             <ModalBody>
               <VStack spacing={4} align="stretch">
-                <Text>Configure automated health alerts powered by Stellar Turrets that can monitor patterns while preserving privacy.</Text>
-                <FormControl>
-                  <FormLabel>Alert Types</FormLabel>
-                  <VStack align="start">
-                    <Checkbox defaultChecked>Irregular Cycle Detection</Checkbox>
-                    <Checkbox defaultChecked>Unusual Symptom Patterns</Checkbox>
-                    <Checkbox defaultChecked>Medication Reminders</Checkbox>
-                    <Checkbox>Health Check Reminders</Checkbox>
-                  </VStack>
-                </FormControl>
-                <FormControl>
-                  <FormLabel>Notification Channels</FormLabel>
-                  <VStack align="start">
-                    <Checkbox defaultChecked>In-App</Checkbox>
-                    <Checkbox>Email</Checkbox>
-                    <Checkbox>Push Notification</Checkbox>
-                  </VStack>
-                </FormControl>
-                <Box bg="gray.50" p={4} borderRadius="md">
-                  <Text fontWeight="bold" mb={2}>Active Alerts:</Text>
-                  <List spacing={2}>
-                    <ListItem>
-                      <HStack>
-                        <Badge colorScheme="purple">Active</Badge>
-                        <Text>Cycle Length Monitoring</Text>
-                      </HStack>
-                    </ListItem>
-                    <ListItem>
-                      <HStack>
-                        <Badge colorScheme="purple">Active</Badge>
-                        <Text>Symptom Pattern Analysis</Text>
-                      </HStack>
-                    </ListItem>
-                  </List>
-                </Box>
-                {authError && currentAction === 'healthAlerts' && (
-                  <Alert status="error" borderRadius="md" mt={4}>
-                    <AlertIcon />
-                    <AlertDescription>{authError}</AlertDescription>
-                  </Alert>
-                )}
+                <Text>Manage your application settings, including health alerts preferences.</Text>
+                <Text>Click the button below to navigate to the Settings page.</Text>
               </VStack>
             </ModalBody>
             <ModalFooter>
               <Button 
                 sx={animatedGradientStyle} 
                 mr={3}
-                onClick={handleSaveHealthAlertSettings}
-                isLoading={isAuthenticating && currentAction === 'healthAlerts'}
-                loadingText="Authenticating..."
+                onClick={() => {
+                  onClose();
+                  navigate('/settings');
+                }}
               >
-                Save Settings
+                Go to Settings
               </Button>
               <Button variant="ghost" onClick={onClose}>Cancel</Button>
             </ModalFooter>
@@ -951,6 +1229,33 @@ export const DashboardPage = () => {
         
       default:
         return null;
+    }
+  };
+
+  // Add a new function to generate detailed insights
+  const handleGenerateDetailedInsights = async () => {
+    setIsLoadingDetailedInsights(true);
+    try {
+      const insights = await geminiService.generateDetailedHealthInsights(cycleData);
+      setDetailedInsights(insights);
+      toast({
+        title: 'Insights Generated',
+        description: 'New health insights have been generated based on your data.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('Error generating detailed health insights:', error);
+      toast({
+        title: 'Generation Failed',
+        description: 'Unable to generate insights. Please try again later.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoadingDetailedInsights(false);
     }
   };
 
@@ -964,6 +1269,15 @@ export const DashboardPage = () => {
           <Text color="gray.600">your secure menstrual health companion</Text>
         </Box>
         <HStack>
+          <Button 
+            leftIcon={<Box fontSize="xl">{rewardsFeature?.emoji || '🏆'}</Box>}
+            colorScheme="purple"
+            size="sm"
+            onClick={() => openFeatureModal(rewardsFeature)}
+            mr={2}
+          >
+            Earn Rewards
+          </Button>
           <Stat textAlign="right" mr={4}>
             <StatLabel>Wallet Balance</StatLabel>
             <StatNumber fontSize="lg">
@@ -986,7 +1300,7 @@ export const DashboardPage = () => {
             />
             <MenuList>
               <MenuItem>Profile</MenuItem>
-              <MenuItem>Settings</MenuItem>
+              <MenuItem onClick={() => navigate('/settings')}>Settings</MenuItem>
               <MenuItem onClick={handleLogout}>Logout</MenuItem>
             </MenuList>
           </Menu>
@@ -1052,22 +1366,6 @@ export const DashboardPage = () => {
             <Icon as={FaGraduationCap} mr={2} />
             NFT Education
           </Button>
-          <Button
-            variant="ghost"
-            px={4}
-            py={3}
-            borderRadius="md"
-            fontWeight="medium"
-            color={activeTab === 'research-marketplace' ? 'purple.500' : 'gray.700'}
-            bg={activeTab === 'research-marketplace' ? 'purple.50' : 'transparent'}
-            _hover={{ bg: 'white', textDecoration: 'none' }}
-            display="flex"
-            alignItems="center"
-            onClick={() => setActiveTab('research-marketplace')}
-          >
-            <Icon as={FaFlask} mr={2} />
-            Research Marketplace
-          </Button>
         </HStack>
       </Box>
 
@@ -1075,18 +1373,29 @@ export const DashboardPage = () => {
       {activeTab === 'dashboard' && (
       <>
       {/* Cycle data cards */}
-      <Grid templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(3, 1fr)' }} gap={6} mb={8}>
+      <Grid templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(3, 1fr)' }} gap={8} mb={6}>
         <GridItem colSpan={1}>
           <Card 
             borderRadius="lg" 
             boxShadow="md" 
-            height="100%"
+            height="460px" /* Increased height to fit full calendar */
             _hover={{ transform: 'translateY(-5px)', transition: 'transform 0.3s' }}
+            display="flex"
+            flexDirection="column"
           >
-            <CardHeader bgGradient={cardGradient} borderTopRadius="lg">
+            <CardHeader 
+              bgGradient={cardGradient} 
+              borderTopRadius="lg"
+              pb={3} /* Consistent padding */
+            >
               <Heading size="md" color="white">Cycle Overview</Heading>
             </CardHeader>
-            <CardBody>
+            <CardBody 
+              overflowY="auto" /* Make content scrollable */
+              flexGrow={1} /* Fill available space */
+              p={4} /* Consistent padding */
+            >
+              <VStack spacing={3} align="stretch">
               <Stat>
                 <StatLabel>Current Cycle Day</StatLabel>
                 <StatNumber>Day {cycleData[0].day}</StatNumber>
@@ -1097,47 +1406,57 @@ export const DashboardPage = () => {
                 size="sm" 
                 colorScheme="purple" 
                 borderRadius="full"
-                mt={2}
-                mb={3}
+                  mt={0}
+                  mb={0}
               />
-              <Button sx={animatedGradientStyle} size="sm" width="full">
+                <Button 
+                  sx={animatedGradientStyle} 
+                  size="sm" 
+                  width="full"
+                  mb={2}
+                  onClick={() => {
+                    const today = new Date();
+                    const formattedToday = format(today, 'yyyy-MM-dd');
+                    const existingEntry = cycleData.find(d => d.date === formattedToday);
+                    if (!existingEntry) {
+                      handleCycleDataUpdate({
+                        date: formattedToday,
+                        day: cycleData[0].day + Math.floor((today.getTime() - new Date(cycleData[0].date).getTime()) / (1000 * 60 * 60 * 24)),
+                        mood: 'Good',
+                        symptoms: [],
+                        phase: 'menstruation', // This will be calculated properly in the calendar component
+                      });
+                    }
+                    navigate('/log-entry');
+                  }}
+                >
                 Log Today
               </Button>
-            </CardBody>
-          </Card>
-        </GridItem>
-
-        <GridItem colSpan={1}>
-          <Card 
-            borderRadius="lg" 
-            boxShadow="md" 
-            height="100%"
-            _hover={{ transform: 'translateY(-5px)', transition: 'transform 0.3s' }}
-          >
-            <CardHeader bgGradient={cardGradient} borderTopRadius="lg">
-              <Heading size="md" color="white">Mood Tracker</Heading>
-            </CardHeader>
-            <CardBody>
-              <VStack align="start" spacing={3}>
-                {cycleData.map((day, index) => (
-                  <HStack key={index} w="100%" justifyContent="space-between">
-                    <Text fontWeight="semibold">Day {day.day}:</Text>
-                    <Badge colorScheme={
-                      day.mood === 'Great' ? 'green' : 
-                      day.mood === 'Good' ? 'blue' : 
-                      day.mood === 'Fair' ? 'yellow' : 'red'
-                    }>
-                      {day.mood}
-                    </Badge>
-                  </HStack>
-                ))}
+                
+                {/* Calendar Component */}
+                <Box mt={1} width="100%" overflowX="auto">
+                  <CycleCalendar 
+                    cycleData={cycleData}
+                    onDataUpdate={handleCycleDataUpdate}
+                    currentCycleStartDate={cycleData[0].date}
+                    cycleLength={28}
+                    periodLength={5}
+                  />
+                </Box>
+                
+                {/* Full Calendar Button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  width="full"
+                  mt={2}
+                  leftIcon={<FaCalendarAlt />}
+                  onClick={() => navigate('/full-calendar')}
+                >
+                  View Full Calendar
+                </Button>
               </VStack>
             </CardBody>
-            <CardFooter pt={0}>
-              <Text fontSize="sm" color="gray.500">
-                Your mood data is securely encrypted
-              </Text>
-            </CardFooter>
           </Card>
         </GridItem>
 
@@ -1145,37 +1464,625 @@ export const DashboardPage = () => {
           <Card 
             borderRadius="lg" 
             boxShadow="md" 
-            height="100%"
+            height="460px"
             _hover={{ transform: 'translateY(-5px)', transition: 'transform 0.3s' }}
+            display="flex"
+            flexDirection="column"
           >
-            <CardHeader bgGradient={cardGradient} borderTopRadius="lg">
-              <Heading size="md" color="white">Symptoms</Heading>
+            <CardHeader 
+              bgGradient={cardGradient} 
+              borderTopRadius="lg"
+              pb={3}
+            >
+              <Heading size="md" color="white">Productivity & Cycle Sync</Heading>
             </CardHeader>
-            <CardBody>
-              <VStack align="start" spacing={3}>
+            <CardBody 
+              overflowY="auto"
+              flexGrow={1}
+              p={4}
+            >
+              <VStack spacing={4} align="stretch">
+                {/* Tasks Section - Now at the top */}
+                <Box>
+                  <Flex justify="space-between" align="center" mb={4}>
+                    <Heading size="md">Your Tasks</Heading>
+                    <Badge 
+                      colorScheme={currentPhase === 'menstruation' ? 'red' : 
+                                currentPhase === 'follicular' ? 'yellow' : 
+                                currentPhase === 'ovulation' ? 'green' : 'purple'} 
+                      variant="subtle"
+                      px={2}
+                      py={1}
+                      borderRadius="full"
+                    >
+                      {currentPhase.charAt(0).toUpperCase() + currentPhase.slice(1)} Phase
+                    </Badge>
+                  </Flex>
+                  
+                  {/* Task Lists by Phase with color coding */}
+                  <VStack align="stretch" spacing={3}>
+                    {/* Optimal tasks for current phase */}
+                    {tasks.filter(task => task.optimalPhases.includes(currentPhase) && !task.completed).length > 0 && (
+                <Box>
+                        <Flex align="center" mb={2}>
+                          <Box width="8px" height="8px" borderRadius="full" bg="green.400" mr={2}></Box>
+                          <Text fontSize="sm" fontWeight="medium" color="green.600">Optimal For Now</Text>
+                        </Flex>
+                        <VStack align="stretch" spacing={1}>
+                          {tasks.filter(task => task.optimalPhases.includes(currentPhase) && !task.completed)
+                            .map(task => (
+                              <Flex 
+                                key={task.id} 
+                                align="center" 
+                                p={2} 
+                                bg="green.50" 
+                                borderRadius="md"
+                                borderLeft="4px solid"
+                                borderLeftColor="green.400"
+                              >
+                                <Checkbox 
+                                  isChecked={task.completed}
+                                  onChange={() => toggleTaskComplete(task.id)}
+                                  mr={3}
+                                  colorScheme="green"
+                                />
+                                <Text flex={1} fontSize="md">{task.title}</Text>
+                              </Flex>
+                            ))}
+                        </VStack>
+                </Box>
+                    )}
+                    
+                    {/* Tasks for other phases - grouped by phase */}
+                    {(() => {
+                      const renderedIds = new Set<number>();
+                      return ['follicular', 'ovulation', 'luteal', 'menstruation']
+                        .filter(phase => phase !== currentPhase)
+                        .map(phase => {
+                          const phaseTasks = tasks.filter(task => 
+                            task.optimalPhases.includes(phase) && 
+                            !task.optimalPhases.includes(currentPhase) &&
+                            !task.completed &&
+                            !renderedIds.has(task.id)
+                          );
+                          phaseTasks.forEach(task => renderedIds.add(task.id));
+ 
+                          if (phaseTasks.length === 0) return null;
+ 
+                          const phaseColors = {
+                             menstruation: { bg: 'red.50', border: 'red.400', text: 'red.600' },
+                             follicular: { bg: 'yellow.50', border: 'yellow.400', text: 'yellow.700' },
+                             ovulation: { bg: 'green.50', border: 'green.400', text: 'green.600' },
+                             luteal: { bg: 'purple.50', border: 'purple.400', text: 'purple.600' }
+                           };
+ 
+                          const color = phaseColors[phase as keyof typeof phaseColors];
+ 
+                          return (
+                             <Box key={phase}>
+                               <Flex align="center" mb={2}>
+                                 <Box width="8px" height="8px" borderRadius="full" bg={color.border} mr={2}></Box>
+                                 <Text fontSize="sm" fontWeight="medium" color={color.text}>
+                                   For {phase.charAt(0).toUpperCase() + phase.slice(1)} Phase
+                                 </Text>
+                               </Flex>
+                               <VStack align="stretch" spacing={1}>
+                                 {phaseTasks.map(task => (
+                                   <Flex 
+                                     key={task.id} 
+                                     align="center" 
+                                     p={2} 
+                                     bg={color.bg} 
+                                     borderRadius="md"
+                                     borderLeft="4px solid"
+                                     borderLeftColor={color.border}
+                                   >
+                                     <Checkbox 
+                                       isChecked={task.completed}
+                                       onChange={() => toggleTaskComplete(task.id)}
+                                       mr={3}
+                                       colorScheme={
+                                         phase === 'menstruation' ? 'red' : 
+                                         phase === 'follicular' ? 'yellow' : 
+                                         phase === 'ovulation' ? 'green' : 'purple'
+                                       }
+                                     />
+                                     <Box flex={1}>
+                                       <Text fontSize="md">{task.title}</Text>
+                                       {task.analysis && (
+                                         <Tooltip
+                                           label={
+                                             <VStack align="start" spacing={1} p={2}>
+                                               <Text fontWeight="bold">AI Analysis:</Text>
+                                               <Text fontSize="sm">{task.analysis.reasoning}</Text>
+                                               <Text fontSize="sm">Energy Level: {task.analysis.energyLevel}</Text>
+                                               {task.analysis.recommendations.map((rec, idx) => (
+                                                 <Text key={idx} fontSize="sm">• {rec}</Text>
+                                               ))}
+                                             </VStack>
+                                           }
+                                           placement="auto"
+                                           hasArrow
+                                           gutter={10}
+                                           closeOnClick={false}
+                                           openDelay={50}
+                                           closeDelay={50}
+                                         >
+                                           <Box as="span" display="inline-block" tabIndex={0}>
+                                             <Icon 
+                                               as={FaBrain} 
+                                               color={task.analysis.energyLevel === 'high' ? 'green.500' : task.analysis.energyLevel === 'low' ? 'red.500' : `${color.border}`} 
+                                               ml={2} 
+                                               boxSize={4}
+                                               cursor="help" 
+                                               verticalAlign="middle"
+                                             />
+                                           </Box>
+                                         </Tooltip>
+                                       )}
+                                     </Box>
+                                   </Flex>
+                                 ))}
+                               </VStack>
+                             </Box>
+                          );
+                        });
+                    })()}
+                    
+                    {/* Completed tasks at bottom */}
+                    {tasks.filter(task => task.completed).length > 0 && (
+                <Box>
+                        <Flex align="center" mb={2}>
+                          <Box width="8px" height="8px" borderRadius="full" bg="gray.300" mr={2}></Box>
+                          <Text fontSize="sm" fontWeight="medium" color="gray.500">Completed</Text>
+                        </Flex>
+                        <VStack align="stretch" spacing={1}>
+                          {tasks.filter(task => task.completed)
+                            .slice(0, 2) // Show just the last 2 completed tasks
+                            .map(task => (
+                              <Flex 
+                                key={task.id} 
+                                align="center" 
+                                p={2} 
+                                bg="gray.50" 
+                                borderRadius="md"
+                                borderLeft="4px solid"
+                                borderLeftColor="gray.300"
+                                opacity={0.7}
+                              >
+                                <Checkbox 
+                                  isChecked={task.completed}
+                                  onChange={() => toggleTaskComplete(task.id)}
+                                  mr={3}
+                                  colorScheme="gray"
+                                />
+                                <Text flex={1} fontSize="md" textDecoration="line-through">{task.title}</Text>
+                              </Flex>
+                            ))}
+                          {tasks.filter(task => task.completed).length > 2 && (
+                            <Text fontSize="xs" color="gray.500" textAlign="center" mt={1}>
+                              + {tasks.filter(task => task.completed).length - 2} more completed
+                            </Text>
+                          )}
+                        </VStack>
+                </Box>
+                    )}
+                    
+                    {/* Empty state */}
+                    {tasks.filter(task => !task.completed).length === 0 && (
+                      <Box py={6} textAlign="center">
+                        <Text fontSize="sm" color="gray.500" mb={2}>No active tasks</Text>
+                        <Text fontSize="xs" color="gray.400">Add a task to get started!</Text>
+                      </Box>
+                    )}
+                  </VStack>
+                </Box>
+                
+                <Divider />
+                
+                {/* Phase Information - Now in the middle */}
+                <Box>
+                  <Text fontSize="md" fontWeight="semibold" mb={3}>Phase Recommendations</Text>
+                  <Flex justify="space-between" gap={2} mb={2}>
+                    {cyclePhaseTaskRecommendations[currentPhase as keyof typeof cyclePhaseTaskRecommendations]
+                      .optimal.slice(0, 3).map((task, idx) => (
+                        <Box key={idx} p={3} borderRadius="md" bg="purple.50" flex="1" textAlign="center">
+                          <Flex align="center" justify="center" mb={1}>
+                            <Icon as={FaCheck} color="green.500" mr={1} />
+                            <Text fontSize="sm" fontWeight="medium">{task}</Text>
+                          </Flex>
+                </Box>
+                      ))}
+                  </Flex>
+                  
+                  <Text fontSize="sm" color="gray.600" mt={2}>
+                    {currentPhase === 'menstruation' ? 'Focus on rest and gentle activities.' : 
+                     currentPhase === 'follicular' ? 'Great time for learning and starting new projects.' : 
+                     currentPhase === 'ovulation' ? 'Peak energy for social interaction and performance.' : 
+                     'Excellent for detailed work and organizing.'}
+                  </Text>
+                </Box>
+                
+                <Divider />
+                
+                {/* Add Task Section - Now at bottom */}
+                <Flex align="center" mt={2}>
+                  <Input 
+                    placeholder="Add a new task..."
+                    value={newTask}
+                    onChange={(e) => setNewTask(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleAddTask();
+                    }}
+                    mr={2}
+                  />
+                  <Button 
+                    colorScheme="purple" 
+                    onClick={handleAddTask}
+                    isLoading={isAnalyzingTask}
+                    loadingText="Analyzing"
+                  >
+                    Add
+                  </Button>
+                </Flex>
+              </VStack>
+            </CardBody>
+          </Card>
+        </GridItem>
+
+        <GridItem colSpan={1}>
+          <Card 
+            borderRadius="lg" 
+            boxShadow="md" 
+            height="460px"
+            _hover={{ transform: 'translateY(-5px)', transition: 'transform 0.3s' }}
+            display="flex"
+            flexDirection="column"
+          >
+            <CardHeader 
+              bgGradient={cardGradient} 
+              borderTopRadius="lg"
+              pb={3}
+            >
+              <Heading size="md" color="white">Mood & Symptom Tracker</Heading>
+            </CardHeader>
+            <CardBody 
+              overflowY="auto"
+              flexGrow={1}
+              p={4}
+            >
+              <VStack align="stretch" spacing={4}>
+                <Tabs 
+                  variant="soft-rounded" 
+                  colorScheme="purple" 
+                  size="sm"
+                  index={trackerTabIndex}
+                  onChange={(index) => setTrackerTabIndex(index)}
+                >
+                  <TabList>
+                    <Tab>Today</Tab>
+                    <Tab>History</Tab>
+                    <Tab>Insights</Tab>
+                  </TabList>
+                  
+                  <TabPanels mt={2}>
+                    {/* Today Tab */}
+                    <TabPanel p={0}>
+                      <VStack align="stretch" spacing={4}>
+                        {/* Current Day Overview */}
+                        <Box>
+                          <Flex align="center" justify="space-between" mb={2}>
+                            <Heading size="sm">Day {cycleData[0].day}: {format(new Date(cycleData[0].date), 'MMM d')}</Heading>
+                            <Badge 
+                              colorScheme={
+                                cycleData[0].mood === 'Great' ? 'green' : 
+                                cycleData[0].mood === 'Good' ? 'blue' : 
+                                cycleData[0].mood === 'Fair' ? 'yellow' : 'red'
+                              }
+                              px={2}
+                              py={1}
+                              borderRadius="full"
+                              display="flex"
+                              alignItems="center"
+                            >
+                              <Icon 
+                                as={getMoodEmoji(cycleData[0].mood || 'Good').icon} 
+                                mr={1} 
+                              />
+                              {cycleData[0].mood}
+                            </Badge>
+                          </Flex>
+                          
+                          <Text fontSize="sm" mb={3}>
+                            You're in your <Badge colorScheme={
+                              cycleData[0].phase === 'menstruation' ? 'red' : 
+                              cycleData[0].phase === 'follicular' ? 'yellow' : 
+                              cycleData[0].phase === 'ovulation' ? 'green' : 'purple'
+                            }>{cycleData[0].phase}</Badge> phase. 
+                            {cycleData[0].phase === 'menstruation' 
+                              ? ' Focus on self-care and rest.'
+                              : cycleData[0].phase === 'follicular'
+                              ? ' Your energy is building.' 
+                              : cycleData[0].phase === 'ovulation'
+                              ? ' Peak confidence and energy.'
+                              : ' Your body is preparing for your next cycle.'}
+                          </Text>
+                          
+                          {cycleData[0].symptoms && cycleData[0].symptoms.length > 0 ? (
+                            <Box>
+                              <Text fontSize="sm" fontWeight="medium" mb={1}>Today's Symptoms:</Text>
+                              <Flex flexWrap="wrap" gap={2}>
+                                {cycleData[0].symptoms?.map((symptom, i) => (
+                                  <Tag key={i} colorScheme="pink" borderRadius="full" size="sm">
+                                    {symptom}
+                                  </Tag>
+                                ))}
+                              </Flex>
+                            </Box>
+                          ) : (
+                            <Box>
+                              <Text fontSize="sm" fontWeight="medium" mb={1}>No symptoms recorded today</Text>
+                              <Button 
+                                size="xs" 
+                                leftIcon={<FaPlus />} 
+                                colorScheme="purple" 
+                                variant="outline"
+                                onClick={() => navigate('/log-entry')}
+                              >
+                                Add symptoms
+                              </Button>
+                            </Box>
+                          )}
+                        </Box>
+                        
+                        {/* Mood Chart */}
+                        <Box pt={2}>
+                          <Flex justify="space-between" align="center" mb={2}>
+                            <Text fontSize="sm" fontWeight="medium">Recent Mood Trend</Text>
+                            <IconButton 
+                              aria-label="View all history" 
+                              icon={<FaHistory />} 
+                              size="xs" 
+                              variant="ghost"
+                              onClick={() => setTrackerTabIndex(1)} // Switch to History tab
+                            />
+                          </Flex>
+                          <Box position="relative" height="60px" bg="gray.50" borderRadius="md" p={2}>
+                            <Flex height="100%" align="flex-end">
+                              {moodTrendData.slice(-7).map((day, i) => {
+                                const { icon: MoodIcon, color } = getMoodEmoji(day.mood);
+                                const heightMap = { 'Great': '100%', 'Good': '75%', 'Fair': '50%', 'Poor': '25%' };
+                                const height = heightMap[day.mood as keyof typeof heightMap] || '50%';
+                                const isToday = i === moodTrendData.slice(-7).length - 1;
+                                
+                                return (
+                                  <Tooltip key={i} label={`${format(new Date(day.date), 'MMM d')}: ${day.mood}`}>
+                                    <Box 
+                                      flex="1"
+                                      height={height}
+                                      mx={0.5}
+                                      bg={color}
+                                      borderRadius="sm"
+                                      opacity={isToday ? 1 : 0.7}
+                                      _hover={{ opacity: 1 }}
+                                      transition="all 0.2s"
+                                      position="relative"
+                                    >
+                                      {isToday && (
+                                        <Box 
+                                          position="absolute" 
+                                          top="-18px" 
+                                          left="50%" 
+                                          transform="translateX(-50%)"
+                                        >
+                                          <Icon as={MoodIcon} color={color} />
+                                        </Box>
+                                      )}
+                                    </Box>
+                                  </Tooltip>
+                                );
+                              })}
+                            </Flex>
+                          </Box>
+                        </Box>
+                        
+                        {/* Common Patterns */}
+                        <Box>
+                          <Text fontSize="sm" fontWeight="medium" mb={2}>Common Patterns</Text>
+                          <Card variant="outline" size="sm">
+                            <CardBody py={2} px={3} position="relative">
+                              {isLoadingInsights && (
+                                <Spinner
+                                  size="xs"
+                                  position="absolute"
+                                  right="8px"
+                                  top="8px"
+                                  color="purple.500"
+                                />
+                              )}
+                              <Text fontSize="xs" dangerouslySetInnerHTML={{ __html: commonPattern }} />
+                            </CardBody>
+                          </Card>
+                        </Box>
+                        
+                        {/* Quick Actions */}
+                        <Flex gap={2} justify="center" pt={1}>
+                          <Button 
+                            size="sm" 
+                            leftIcon={<FaPlus />} 
+                            colorScheme="purple" 
+                            variant="solid"
+                            onClick={() => navigate('/log-entry')}
+                          >
+                            Log Today
+                          </Button>
+                          <Button
+                            size="sm"
+                            colorScheme="purple"
+                            variant="outline"
+                            onClick={() => setTrackerTabIndex(2)} // Switch to Insights tab
+                          >
+                            View Insights
+                          </Button>
+                        </Flex>
+                      </VStack>
+                    </TabPanel>
+                    
+                    {/* History Tab */}
+                    <TabPanel p={0}>
+                      <VStack align="stretch" spacing={3}>
+                        {/* Last 3 days summary */}
+                        <Box borderRadius="md" overflow="hidden">
                 {cycleData.map((day, index) => (
-                  <HStack key={index} w="100%" justifyContent="space-between" flexWrap="wrap">
-                    <Text fontWeight="semibold">Day {day.day}:</Text>
-                    <HStack>
-                      {day.symptoms.length > 0 ? 
-                        day.symptoms.map((symptom, i) => (
-                          <Tag key={i} size="sm" colorScheme="pink" borderRadius="full">
+                            <Box 
+                              key={index}
+                              p={3}
+                              borderBottom={index < cycleData.length - 1 ? "1px solid" : "none"}
+                              borderColor="gray.100"
+                              transition="background-color 0.2s"
+                              _hover={{ bg: 'gray.50' }}
+                            >
+                              <Flex justify="space-between" align="center" mb={1}>
+                                <HStack>
+                                  <Text fontWeight="medium">Day {day.day}</Text>
+                                  <Text fontSize="sm" color="gray.500">{format(new Date(day.date), 'MMM d')}</Text>
+                                </HStack>
+                                <Badge 
+                                  colorScheme={
+                        day.mood === 'Great' ? 'green' : 
+                        day.mood === 'Good' ? 'blue' : 
+                        day.mood === 'Fair' ? 'yellow' : 'red'
+                                  }
+                                >
+                        {day.mood}
+                      </Badge>
+                              </Flex>
+                              
+                              <HStack spacing={2} flexWrap="wrap" mb={1}>
+                                <Text fontSize="xs" color="gray.600" fontWeight="medium">Phase:</Text>
+                                <Badge size="sm" colorScheme={
+                                  day.phase === 'menstruation' ? 'red' : 
+                                  day.phase === 'follicular' ? 'yellow' : 
+                                  day.phase === 'ovulation' ? 'green' : 'purple'
+                                } variant="subtle">
+                                  {day.phase}
+                      </Badge>
+                    </HStack>
+                              
+                    <HStack spacing={2} flexWrap="wrap">
+                                <Text fontSize="xs" color="gray.600" fontWeight="medium">Symptoms:</Text>
+                                {(day.symptoms?.length ?? 0) > 0 ? 
+                                  day.symptoms?.map((symptom, i) => (
+                                    <Tag key={i} size="sm" colorScheme="pink" borderRadius="full" variant="subtle">
                             {symptom}
                           </Tag>
                         )) : 
-                        <Tag size="sm" colorScheme="green" borderRadius="full">None</Tag>
+                                  <Text fontSize="xs" color="gray.400">None recorded</Text>
                       }
                     </HStack>
-                  </HStack>
+                  </Box>
                 ))}
+                        </Box>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          width="full" 
+                          leftIcon={<FaHistory />}
+                          onClick={() => navigate('/full-calendar')}
+                        >
+                          View Full History
+                        </Button>
+              </VStack>
+                    </TabPanel>
+                    
+                    {/* Insights Tab */}
+                    <TabPanel p={0}>
+                      <VStack align="stretch" spacing={4}>
+                        {/* Top Symptoms */}
+                        <Box>
+                          <Text fontSize="sm" fontWeight="medium" mb={2}>Your Top Symptoms</Text>
+                          <VStack align="stretch" spacing={2}>
+                            {topSymptoms.map((symptom, i) => (
+                              <Flex key={i} align="center" justify="space-between" p={2} bg="gray.50" borderRadius="md">
+                                <HStack>
+                                  <Text>{symptom.name}</Text>
+                                  <Badge colorScheme="pink" variant="subtle">{symptom.count} times</Badge>
+                                </HStack>
+                                <Text fontSize="xs" color="gray.500">
+                                  Most common in: <Badge colorScheme="purple" variant="subtle" fontSize="xs">
+                                    {typeof symptom.phase === 'string' 
+                                      ? symptom.phase 
+                                      : symptom.phases?.join(', ')}
+                                  </Badge>
+                                </Text>
+                              </Flex>
+                            ))}
+                          </VStack>
+                        </Box>
+                        
+                        {/* Personalized Insights */}
+                        <Box>
+                          <Text fontSize="sm" fontWeight="medium" mb={2}>Personalized Insights</Text>
+                          {isLoadingInsights ? (
+                            <Flex justify="center" py={4}>
+                              <Spinner color="purple.500" />
+                            </Flex>
+                          ) : (
+                            <VStack align="stretch" spacing={2}>
+                              {moodInsights.map((insight, i) => (
+                                <Card key={i} variant="outline" size="sm">
+                                  <CardBody>
+                                    <Flex>
+                                      <Box mr={3}>
+                                        <Icon 
+                                          as={
+                                            insight.color === "blue" ? FaChartLine :
+                                            insight.color === "orange" ? FaRegLightbulb :
+                                            insight.color === "green" ? FaCheckCircle :
+                                            FaRegChartBar
+                                          } 
+                                          boxSize={5} 
+                                          color={`${insight.color}.500`} 
+                                        />
+                                      </Box>
+                                      <Box>
+                                        <Text fontSize="sm" fontWeight="medium">{insight.title}</Text>
+                                        <Text fontSize="xs" color="gray.600">{insight.text}</Text>
+                                      </Box>
+                                    </Flex>
+            </CardBody>
+                                </Card>
+                              ))}
+                            </VStack>
+                          )}
+                        </Box>
+                        
+                        <Button 
+                          size="sm" 
+                          colorScheme="purple" 
+                          leftIcon={<FaRegLightbulb />}
+                          onClick={() => setActiveTab('ai-health-insights')}
+                        >
+                          Get More Insights
+                        </Button>
+                      </VStack>
+                    </TabPanel>
+                  </TabPanels>
+                </Tabs>
               </VStack>
             </CardBody>
+            <CardFooter pt={0} px={4} pb={3}>
+              <Text fontSize="sm" color="gray.500">
+                Your data is securely encrypted and used to provide personalized insights
+              </Text>
+            </CardFooter>
           </Card>
         </GridItem>
       </Grid>
 
       {/* Advanced Stellar Features (now after the cycle data cards) */}
-      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8} mb={10}>
+      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8} mb={8}>
         {advancedFeatures.map((feature, index) => (
           <Card 
             key={index} 
@@ -1201,7 +2108,7 @@ export const DashboardPage = () => {
               </HStack>
             </CardHeader>
             <CardBody pt={0}>
-              <Text mb={4}>{feature.description}</Text>
+              <Text mb={0}>{feature.description}</Text>
               <Button 
                 size="sm" 
                 onClick={() => openFeatureModal(feature)}
@@ -1213,98 +2120,18 @@ export const DashboardPage = () => {
           </Card>
         ))}
       </SimpleGrid>
-      
-      <Box mb={10}>
-        <Heading as="h2" size="lg" mb={4} bgGradient={cardGradient} bgClip="text">
-          Secured by Stellar Blockchain
-        </Heading>
-        <Text mb={6}>
-          CycleBuddy leverages the power of Stellar blockchain technology to provide enhanced security and privacy for your health data.
-        </Text>
-        
-        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8}>
-          {blockchainFeatures.map((feature, index) => (
-            <Card 
-              key={index} 
-              borderRadius="lg" 
-              boxShadow="md" 
-              height="100%"
-              _hover={{ transform: 'translateY(-5px)', transition: 'transform 0.3s' }}
-            >
-              <CardHeader>
-                <HStack>
-                  <Box
-                    bg="#D53F8C20"
-                    p={2}
-                    borderRadius="full"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    fontSize="xl"
-                  >
-                    {feature.emoji}
-                  </Box>
-                  <Heading size="md">{feature.title}</Heading>
-                </HStack>
-              </CardHeader>
-              <CardBody pt={0}>
-                <Text>{feature.description}</Text>
-              </CardBody>
-            </Card>
-          ))}
-        </SimpleGrid>
-      </Box>
 
-      <Heading as="h2" size="lg" mb={4} bgGradient={cardGradient} bgClip="text">
-        Resources & Information
-      </Heading>
-      <Grid templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(3, 1fr)' }} gap={6}>
-        {infoCards.map((card, index) => (
-          <GridItem key={index}>
-            <Card 
-              borderRadius="lg" 
-              boxShadow="md" 
-              height="100%"
-              _hover={{ transform: 'translateY(-5px)', transition: 'transform 0.3s' }}
-            >
-              <CardHeader>
-                <HStack>
-                  <Box
-                    bg="#8A2BE220"
-                    p={2}
-                    borderRadius="full"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    fontSize="xl"
-                  >
-                    {card.emoji}
-                  </Box>
-                  <Heading size="md">{card.title}</Heading>
-                </HStack>
-              </CardHeader>
-              <CardBody pt={0}>
-                <Text>{card.content}</Text>
-              </CardBody>
-            </Card>
-          </GridItem>
-        ))}
-      </Grid>
-
-      <Box mt={16} p={6} borderRadius="lg" bg="gray.50" boxShadow="sm">
-        <Heading as="h3" size="md" mb={4} textAlign="center">
+      <Box mt={10} p={6} borderRadius="lg" bg="gray.50" boxShadow="sm" textAlign="center">
+        <Heading as="h3" size="md" mb={4}>
           Your Data Security
         </Heading>
         <Divider mb={4} />
         <List spacing={3}>
-          <ListItem>
-            ✓ Secured with Stellar blockchain technology and passkey authentication
+          <ListItem textAlign="center">
+             Secured with Stellar blockchain technology and passkey authentication
           </ListItem>
-          <ListItem>
-            ✓ Your health data is encrypted and stored securely
-          </ListItem>
-          <ListItem>
-            ✓ Only you have access to your personal information
+          <ListItem textAlign="center">
+             You own your data, your decision to sell it, your money
           </ListItem>
         </List>
       </Box>
@@ -1318,43 +2145,6 @@ export const DashboardPage = () => {
       </Modal>
 
       {/* Breakthrough Features Section */}
-      <Box mb={8}>
-        <Heading size="lg" mb={4}>Breakthrough Features</Heading>
-        <Text mb={6}>
-          Explore our innovative features that leverage the full power of Web3 and the Stellar blockchain to transform menstrual health tracking.
-        </Text>
-        
-        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
-          {breakthroughFeatures.map((feature, index) => (
-            <Card 
-              key={index} 
-              boxShadow="md" 
-              borderRadius="xl" 
-              overflow="hidden"
-              height="100%"
-              transition="transform 0.2s"
-              _hover={{ transform: 'translateY(-5px)' }}
-            >
-              <Box bg={`${feature.color}.500`} py={2} px={4}>
-                <Text color="white" fontSize="4xl" textAlign="center">{feature.emoji}</Text>
-              </Box>
-              <CardBody>
-                <Heading size="md" mb={2}>{feature.title}</Heading>
-                <Text mb={4}>{feature.description}</Text>
-              </CardBody>
-              <CardFooter pt={0}>
-                <Button 
-                  colorScheme={feature.color}
-                  width="100%"
-                  onClick={() => setActiveTab(feature.tabValue)}
-                >
-                  Explore Feature
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </SimpleGrid>
-      </Box>
       </>
       )}
 
@@ -1368,14 +2158,18 @@ export const DashboardPage = () => {
                 <Box width="250px">
                   <Select
                     placeholder="Select AI model"
+                    defaultValue="symptom-correlation"
                   >
-                    <option>Cycle Pattern Analyzer (v1.2)</option>
-                    <option>Symptom Correlation Engine (v2.0)</option>
+                    <option value="symptom-correlation">Symptom Correlation Engine (v2.0)</option>
+                    <option value="cycle-analyzer">Cycle Pattern Analyzer (v1.2)</option>
                   </Select>
                 </Box>
                 <Button
                   colorScheme="purple"
                   leftIcon={<FaBrain />}
+                  onClick={handleGenerateDetailedInsights}
+                  isLoading={isLoadingDetailedInsights}
+                  loadingText="Generating"
                 >
                   Generate Insights
                 </Button>
@@ -1402,8 +2196,66 @@ export const DashboardPage = () => {
             </HStack>
           </Box>
 
-          {/* Example insights based on screenshot */}
+          {/* Loading state */}
+          {isLoadingDetailedInsights && (
+            <Flex justify="center" py={10}>
+              <VStack>
+                <Spinner size="xl" color="purple.500" thickness="4px" speed="0.65s" />
+                <Text mt={4} color="gray.600">Analyzing your health data...</Text>
+              </VStack>
+            </Flex>
+          )}
+
+          {/* Insights cards */}
+          {!isLoadingDetailedInsights && (
           <Grid templateColumns="repeat(3, 1fr)" gap={6}>
+              {detailedInsights.map((insight, index) => (
+                <Card key={index} borderRadius="md" overflow="hidden">
+                  <CardHeader pb={2}>
+                    <Flex justify="space-between" align="center">
+                      <Heading size="md">{insight.title}</Heading>
+                      <Badge 
+                        colorScheme={
+                          insight.category === "INFORMATIONAL" ? "blue" :
+                          insight.category === "ADVISORY" ? "yellow" : "red"
+                        }
+                      >
+                        {insight.category}
+                      </Badge>
+                    </Flex>
+                  </CardHeader>
+                  <CardBody pt={0}>
+                    <Text>{insight.description}</Text>
+                  </CardBody>
+                  <Divider />
+                  <CardFooter>
+                    <Flex width="100%" justify="space-between" align="center">
+                      <HStack>
+                        <Icon 
+                          as={
+                            insight.category === "INFORMATIONAL" ? FaInfoCircle :
+                            insight.category === "ADVISORY" ? FaExclamationTriangle : FaBell
+                          } 
+                          color={
+                            insight.category === "INFORMATIONAL" ? "blue.500" :
+                            insight.category === "ADVISORY" ? "yellow.500" : "red.500"
+                          } 
+                        />
+                        <Text fontSize="sm">Confidence: {insight.confidence}%</Text>
+                      </HStack>
+                      <Badge 
+                        colorScheme={insight.verified ? "green" : "gray"}
+                      >
+                        {insight.verified ? "VERIFIED" : "UNVERIFIED"}
+                      </Badge>
+                    </Flex>
+                  </CardFooter>
+                </Card>
+              ))}
+              
+              {/* Show initial cards if no insights generated yet */}
+              {detailedInsights.length === 0 && (
+                <>
             <Card borderRadius="md" overflow="hidden">
               <CardHeader pb={2}>
                 <Flex justify="space-between" align="center">
@@ -1469,7 +2321,10 @@ export const DashboardPage = () => {
                 </Flex>
               </CardFooter>
             </Card>
+                </>
+              )}
           </Grid>
+          )}
         </Box>
       )}
 
@@ -1602,9 +2457,6 @@ export const DashboardPage = () => {
                         <Box>
                           <Text mb={1}>Progress: 60%</Text>
                           <Progress value={60} colorScheme="purple" hasStripe size="md" />
-                          <Text fontSize="sm" mt={2}>
-                            Status: <Badge colorScheme="blue">InProgress</Badge>
-                          </Text>
                         </Box>
                         <Flex justify="flex-end">
                           <Button colorScheme="blue">Continue</Button>
@@ -1626,176 +2478,6 @@ export const DashboardPage = () => {
         </Box>
       )}
 
-      {/* Research Marketplace Tab */}
-      {activeTab === 'research-marketplace' && (
-        <Box>
-          <Box mb={8}>
-            <Heading size="xl" mb={4}>Decentralized Research Marketplace</Heading>
-            <Text color="gray.600" mb={6}>
-              Contribute anonymous health data to research initiatives of your choosing and receive fair 
-              compensation through smart contracts. Your privacy is maintained while supporting valuable health research.
-            </Text>
-            
-            <HStack mb={6}>
-              <Tag colorScheme="green" size="md" py={2} px={4} borderRadius="full">
-                <Icon as={FaShieldAlt} mr={2} />
-                Privacy Preserving
-              </Tag>
-              <Tag colorScheme="blue" size="md" py={2} px={4} borderRadius="full">
-                <Icon as={FaMoneyBillWave} mr={2} />
-                Fair Compensation
-              </Tag>
-              <Tag colorScheme="purple" size="md" py={2} px={4} borderRadius="full">
-                <Icon as={FaFlask} mr={2} />
-                Support Research
-              </Tag>
-            </HStack>
-          </Box>
-
-          <Grid templateColumns="repeat(4, 1fr)" gap={6} mb={8}>
-            <Card>
-              <CardBody>
-                <Stat>
-                  <StatLabel>Reputation Score</StatLabel>
-                  <StatNumber>72</StatNumber>
-                  <StatHelpText>
-                    ▲ Above average
-                  </StatHelpText>
-                </Stat>
-              </CardBody>
-            </Card>
-            
-            <Card>
-              <CardBody>
-                <Stat>
-                  <StatLabel>Total Contributions</StatLabel>
-                  <StatNumber>3</StatNumber>
-                  <StatHelpText>
-                    Last contributed: 2025-05-10
-                  </StatHelpText>
-                </Stat>
-              </CardBody>
-            </Card>
-            
-            <Card>
-              <CardBody>
-                <Stat>
-                  <StatLabel>Total Earned</StatLabel>
-                  <StatNumber>5.0000000 XLM</StatNumber>
-                  <StatHelpText>
-                    ▲ Through data contributions
-                  </StatHelpText>
-                </Stat>
-              </CardBody>
-            </Card>
-            
-            <Card>
-              <CardBody>
-                <Stat>
-                  <StatLabel>Preferred Categories</StatLabel>
-                  <HStack mt={2} spacing={1} flexWrap="wrap">
-                    <Tag size="sm" colorScheme="blue" m={1}>symptoms</Tag>
-                    <Tag size="sm" colorScheme="blue" m={1}>cycle_length</Tag>
-                    <Tag size="sm" colorScheme="blue" m={1}>diet</Tag>
-                  </HStack>
-                </Stat>
-              </CardBody>
-            </Card>
-          </Grid>
-
-          <Tabs variant="soft-rounded" colorScheme="purple" mb={8}>
-            <TabList>
-              <Tab>Available Research Projects</Tab>
-              <Tab>My Contributions</Tab>
-            </TabList>
-
-            <TabPanels>
-              <TabPanel>
-                {/* Active research project example based on screenshot */}
-                <Box>
-                  <Card borderWidth="1px" borderRadius="lg" overflow="hidden" mb={4}>
-                    <CardBody>
-                      <Box>
-                        <Flex align="center" mb={2}>
-                          <Heading size="md" mr={2}>Cycle Pattern Analysis Study</Heading>
-                          <Badge colorScheme="green" mr={2}>ACTIVE</Badge>
-                          <Badge colorScheme="green">ETHICALLY APPROVED</Badge>
-                        </Flex>
-                        
-                        <Text mb={4}>Research on identifying patterns in menstrual cycles that could indicate underlying health conditions.</Text>
-                        
-                        <HStack mb={3}>
-                          <Icon as={FaUniversity} color="purple.500" />
-                          <Text fontWeight="bold">Women's Health Research Institute</Text>
-                        </HStack>
-                        
-                        <Text fontSize="sm" mb={2}>Accepting data in these categories:</Text>
-                        <HStack mb={4} flexWrap="wrap">
-                          <Tag colorScheme="blue" size="sm" m={1}>cycle_length</Tag>
-                          <Tag colorScheme="blue" size="sm" m={1}>symptoms</Tag>
-                          <Tag colorScheme="blue" size="sm" m={1}>flow_intensity</Tag>
-                        </HStack>
-                        
-                        <Box p={4} bg="gray.50" borderRadius="md" mb={4}>
-                          <HStack mb={3} justifyContent="space-between">
-                            <Box>
-                              <Text fontSize="sm" color="gray.500">Payment per Contribution</Text>
-                              <Text fontWeight="bold">5.0000000 XLM</Text>
-                            </Box>
-                            <Box>
-                              <Text fontSize="sm" color="gray.500">Min. Reputation Required</Text>
-                              <Text fontWeight="bold">40</Text>
-                            </Box>
-                            <Box>
-                              <Text fontSize="sm" color="gray.500">Contributions</Text>
-                              <Text fontWeight="bold">20</Text>
-                            </Box>
-                          </HStack>
-                          
-                          <Box>
-                            <Flex justify="space-between" align="center" mb={1}>
-                              <Text fontSize="xs">Remaining Budget</Text>
-                              <Text fontSize="sm">900.0000000 / 1000.0000000 XLM</Text>
-                            </Flex>
-                            <Progress 
-                              value={90} 
-                              colorScheme="green" 
-                              height="8px"
-                              borderRadius="full"
-                            />
-                          </Box>
-                        </Box>
-                        
-                        <Flex justifyContent="space-between" alignItems="center">
-                          <Flex align="center">
-                            <Icon as={FaClock} color="orange.500" mr={2} />
-                            <Text>Expires On: 2025-09-12</Text>
-                          </Flex>
-                          
-                          <Button 
-                            colorScheme="purple" 
-                            leftIcon={<FaChartLine />}
-                          >
-                            Contribute Data
-                          </Button>
-                        </Flex>
-                      </Box>
-                    </CardBody>
-                  </Card>
-                </Box>
-              </TabPanel>
-              <TabPanel>
-                <Box textAlign="center" p={8}>
-                  <Icon as={FaChartLine} boxSize={12} color="gray.400" mb={4} />
-                  <Heading size="md">No Contributions Yet</Heading>
-                  <Text>Contribute to research projects to see your contributions here.</Text>
-                </Box>
-              </TabPanel>
-            </TabPanels>
-          </Tabs>
-        </Box>
-      )}
-
       {/* Feature Modal */}
       <Modal isOpen={isOpen} onClose={onClose} size="lg">
         <ModalOverlay />
@@ -1803,6 +2485,9 @@ export const DashboardPage = () => {
           {renderModalContent()}
         </ModalContent>
       </Modal>
+
+      {/* CycleBuddy AI Assistant */}
+      <CycleBuddyAI cycleData={cycleData} currentPhase={currentPhase} />
     </Container>
   );
 };

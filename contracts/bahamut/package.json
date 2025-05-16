@@ -1,0 +1,23 @@
+{
+  "name": "bahamut",
+  "version": "1.0.0",
+  "description": "",
+  "main": "CycleStreakToken.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^4.9.3",
+    "hardhat": "^2.24.0"
+  },
+  "dependencies": {
+    "ethers": "^5.7.2"
+  }
+}

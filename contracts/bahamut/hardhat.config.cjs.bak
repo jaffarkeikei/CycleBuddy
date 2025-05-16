@@ -1,0 +1,75 @@
+require("@nomicfoundation/hardhat-toolbox");
+try {
+  require("dotenv").config();
+} catch (error) {
+  console.warn("No .env file found, using default values");
+}
+
+// Default private key (only for local testing, NEVER use in production)
+const DEFAULT_PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+/** @type import('hardhat/config').HardhatUserConfig */
+module.exports = {
+  solidity: {
+    version: "0.8.19",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
+    }
+  },
+  networks: {
+    hardhat: {
+      chainId: 1337
+    },
+    localhost: {
+      url: "http://127.0.0.1:8545"
+    },
+    bahamut: {
+      url: process.env.BAHAMUT_RPC_URL || "https://testnet.rpc.bahamut.io",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [DEFAULT_PRIVATE_KEY],
+      chainId: 38,  // Bahamut Testnet chain ID
+      gasPrice: 20000000000  // 20 gwei
+    },
+    bahamutMainnet: {
+      url: process.env.BAHAMUT_MAINNET_RPC_URL || "https://rpc.bahamut.io",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [DEFAULT_PRIVATE_KEY],
+      chainId: 37,  // Bahamut Mainnet chain ID 
+      gasPrice: 20000000000  // 20 gwei
+    }
+  },
+  etherscan: {
+    apiKey: {
+      bahamut: process.env.BAHAMUT_API_KEY || "",
+      bahamutMainnet: process.env.BAHAMUT_API_KEY || ""
+    },
+    customChains: [
+      {
+        network: "bahamut",
+        chainId: 38,
+        urls: {
+          apiURL: "https://testnet.scan.bahamut.io/api",
+          browserURL: "https://testnet.scan.bahamut.io"
+        }
+      },
+      {
+        network: "bahamutMainnet",
+        chainId: 37,
+        urls: {
+          apiURL: "https://scan.bahamut.io/api",
+          browserURL: "https://scan.bahamut.io"
+        }
+      }
+    ]
+  },
+  paths: {
+    sources: ".",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts"
+  },
+  mocha: {
+    timeout: 40000
+  }
+}; 
