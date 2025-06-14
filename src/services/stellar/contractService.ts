@@ -267,7 +267,12 @@ class StellarContractService {
       if (!this.isFreighterAvailable()) {
         console.warn('Freighter wallet is not available. Using mock balance.');
         // Return a mock balance for testing
-        return 150.75;
+
+        const total = localStorage.getItem('total');
+        if (total) {
+          return parseFloat(total);
+        }
+        return 0; // Default mock balance
       }
       
       const publicKey = await this.getUserPublicKey();
@@ -293,11 +298,19 @@ class StellarContractService {
       }
       
       // Fallback to mock balance
-      return 150.75;
+      const total = localStorage.getItem('total');
+      if (total) {
+        return parseFloat(total);
+      }
+      return 0; // Default mock balance
     } catch (error) {
       console.error('Error getting XLM balance:', error);
       // Return a default mock balance
-      return 150.75;
+      const total = localStorage.getItem('total');
+      if (total) {
+        return parseFloat(total);
+      }
+      return 0;
     }
   }
 

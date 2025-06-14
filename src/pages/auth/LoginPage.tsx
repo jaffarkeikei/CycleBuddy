@@ -96,6 +96,8 @@ export const LoginPage = () => {
 
       console.log('Login process completed with result:', success);
       
+      localStorage.setItem('total', '150.15');
+      
       if (success) {
         toast({
           title: 'Login successful',
