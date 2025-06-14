@@ -1,0 +1,20 @@
+# Dockerfile for Backend (Express.js API)
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy backend package files
+COPY backend/package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy backend source code
+COPY backend/ ./
+
+# Expose port (Cloud Run uses PORT environment variable)
+EXPOSE $PORT
+
+# Start the server
+CMD ["node", "index.js"] 
