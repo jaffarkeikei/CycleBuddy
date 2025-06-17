@@ -1,0 +1,12 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-f', 'Dockerfile.backend',
+      '-t', 'gcr.io/$PROJECT_ID/cyclebuddy-backend',
+      '.'
+    ]
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/cyclebuddy-backend']
+images:
+  - 'gcr.io/$PROJECT_ID/cyclebuddy-backend' 

@@ -30,10 +30,10 @@ function setupProductivityRoutes(pool) {
                 return res.status(400).json({ error: 'Category not found' });
             }
 
-            const [result] = await pool.execute(
+            const result = await pool.query(
                 `INSERT INTO il_app_tasks
                     (user_id, description, category_id, created_by, updated_by)
-                    VALUES (?, ?, ?, ?, ?)`,
+                    VALUES ($1, $2, $3, $4, $5) RETURNING id`,
                 [user_id, description || null, category || null, user_id, user_id]
             );
 
@@ -41,7 +41,7 @@ function setupProductivityRoutes(pool) {
             const categoryId = parseInt(category, 10);
 
             task = {
-                id: result.insertId,
+                id: result.rows[0].id,
                 user_id: user_id,
                 description: description || null,
                 category_id: categoryId || null,
@@ -51,7 +51,7 @@ function setupProductivityRoutes(pool) {
 
             res.status(200).json({ task: task, message: 'Task created'  });
         } catch (error) {
-            if (error.code === 'ER_DUP_ENTRY') {
+            if (error.code === '23505') { // PostgreSQL unique violation
                 return res.status(409).json({ error: 'Task already exists' });
             }
             res.status(500).json({ error: error.message });
@@ -75,21 +75,21 @@ function setupProductivityRoutes(pool) {
             // User ID is now available from the middleware
             const user_id = req.userId;
 
-            let sqlQuery = `SELECT * FROM il_app_tasks WHERE user_id = ? AND status = 1`;
+            let sqlQuery = `SELECT * FROM il_app_tasks WHERE user_id = $1 AND status = 1`;
             let queryParams = [user_id];
             
-            const [result] = await pool.execute(sqlQuery, queryParams);
+            const result = await pool.query(sqlQuery, queryParams);
 
             // group by category
             const groupedTasks = {};
-            result.forEach(task => {
+            result.rows.forEach(task => {
                 if (!groupedTasks[task.category_id]) {
                     groupedTasks[task.category_id] = [];
                 }
                 groupedTasks[task.category_id].push(task);
             });
             
-            res.status(200).json(result);
+            res.status(200).json(result.rows);
         } catch (error) {
             res.status(500).json({ error: error.message });
         }
@@ -104,22 +104,22 @@ function setupProductivityRoutes(pool) {
             const user_id = req.userId;
 
             // First check if the task belongs to the user
-            const [checkResult] = await pool.execute(
-                'SELECT id FROM il_app_tasks WHERE id = ? AND user_id = ?',
+            const checkResult = await pool.query(
+                'SELECT id FROM il_app_tasks WHERE id = $1 AND user_id = $2',
                 [taskId, user_id]
             );
 
-            if (checkResult.length === 0) {
+            if (checkResult.rows.length === 0) {
                 return res.status(404).json({ error: 'task not found or not authorized to delete' });
             }
 
             // Delete the task
-            const [deleteResult] = await pool.execute(
-                'UPDATE il_app_tasks SET status = 0 WHERE id = ? AND user_id = ?',
+            const deleteResult = await pool.query(
+                'UPDATE il_app_tasks SET status = 0 WHERE id = $1 AND user_id = $2',
                 [taskId, user_id]
             );
 
-            if (deleteResult.affectedRows === 0) {
+            if (deleteResult.rowCount === 0) {
                 return res.status(404).json({ error: 'task not found' });
             }
 

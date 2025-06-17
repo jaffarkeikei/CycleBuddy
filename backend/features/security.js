@@ -23,16 +23,16 @@ function setupSecurityRoutes(pool) {
         birthdate || null
       ];
 
-      const [result] = await pool.execute(
+      const result = await pool.query(
         `INSERT INTO il_sec_users 
           (username, name, last_name, mail, password, birthdate)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
         params
       );
       
       // Create user object for token generation
       const newUser = {
-        id: result.insertId,
+        id: result.rows[0].id,
         username,
         name,
         lastName: last_name,
@@ -63,16 +63,16 @@ function setupSecurityRoutes(pool) {
       }
       
       // Check if the user exists in the database
-      const [users] = await pool.execute(
-        'SELECT id, username, name, last_name, mail FROM il_sec_users WHERE (username = ? OR mail = ?) AND password = ? AND status = 1',
-        [username, username, password] // In production, should compare hashed passwords
+      const users = await pool.query(
+        'SELECT id, username, name, last_name, mail FROM il_sec_users WHERE (username = $1 OR mail = $1) AND password = $2 AND status = 1',
+        [username, password] // In production, should compare hashed passwords
       );
       
-      if (users.length === 0) {
+      if (users.rows.length === 0) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
       
-      const user = users[0];
+      const user = users.rows[0];
       
       // Generate token using imported function
       const token = generateToken(user);

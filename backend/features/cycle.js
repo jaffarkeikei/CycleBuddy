@@ -26,16 +26,16 @@ function setupCycleRoutes(pool) {
             // User ID is now available from the middleware
             const user_id = req.userId;
 
-            const [result] = await pool.execute(
+            const result = await pool.query(
                 `INSERT INTO il_app_cycles
-          (user_id, init, end, created_by, updated_by)
-         VALUES (?, ?, ?, ?, ?)`,
+          (user_id, init, "end", created_by, updated_by)
+         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
                 [user_id, init || null, end || null, user_id, user_id]
             );
 
-            res.status(200).json({ id: result.insertId, message: 'Cycle created' });
+            res.status(200).json({ id: result.rows[0].id, message: 'Cycle created' });
         } catch (error) {
-            if (error.code === 'ER_DUP_ENTRY') {
+            if (error.code === '23505') { // PostgreSQL unique violation
                 return res.status(409).json({ error: 'Cycle already exists' });
             }
             res.status(500).json({ error: error.message });
@@ -59,24 +59,26 @@ function setupCycleRoutes(pool) {
             // User ID is now available from the middleware
             const user_id = req.userId;
 
-            let sqlQuery = `SELECT * FROM il_app_cycles WHERE user_id = ? AND status = 1`;
+            let sqlQuery = `SELECT * FROM il_app_cycles WHERE user_id = $1 AND status = 1`;
             let queryParams = [user_id];
+            let paramIndex = 2;
 
             if (init) {
-                sqlQuery += ` AND init >= ?`;
+                sqlQuery += ` AND init >= $${paramIndex}`;
                 queryParams.push(init);
+                paramIndex++;
             }
 
             if (end) {
-                sqlQuery += ` AND end <= ?`;
+                sqlQuery += ` AND "end" <= $${paramIndex}`;
                 queryParams.push(end);
             }
 
             sqlQuery += ` ORDER BY init ASC`;
             
-            const [result] = await pool.execute(sqlQuery, queryParams);
+            const result = await pool.query(sqlQuery, queryParams);
 
-            res.status(200).json(result);
+            res.status(200).json(result.rows);
         } catch (error) {
             res.status(500).json({ error: error.message });
         }
@@ -91,22 +93,22 @@ function setupCycleRoutes(pool) {
             const user_id = req.userId;
 
             // First check if the cycle belongs to the user
-            const [checkResult] = await pool.execute(
-                'SELECT id FROM il_app_cycles WHERE id = ? AND user_id = ?',
+            const checkResult = await pool.query(
+                'SELECT id FROM il_app_cycles WHERE id = $1 AND user_id = $2',
                 [cycleId, user_id]
             );
 
-            if (checkResult.length === 0) {
+            if (checkResult.rows.length === 0) {
                 return res.status(404).json({ error: 'Cycle not found or not authorized to delete' });
             }
 
             // Delete the cycle
-            const [deleteResult] = await pool.execute(
-                'UPDATE il_app_cycles SET status = 0 WHERE id = ? AND user_id = ?',
+            const deleteResult = await pool.query(
+                'UPDATE il_app_cycles SET status = 0 WHERE id = $1 AND user_id = $2',
                 [cycleId, user_id]
             );
 
-            if (deleteResult.affectedRows === 0) {
+            if (deleteResult.rowCount === 0) {
                 return res.status(404).json({ error: 'Cycle not found' });
             }
 
